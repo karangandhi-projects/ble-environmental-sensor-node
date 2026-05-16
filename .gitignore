@@ -1,0 +1,18 @@
+# ESP-IDF build output
+firmware/build/
+firmware/sdkconfig
+
+# Python
+__pycache__/
+*.pyc
+
+# OS/editor
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Local Claude Code state (the project-level .claude/settings.json IS committed)
+.claude/settings.local.json

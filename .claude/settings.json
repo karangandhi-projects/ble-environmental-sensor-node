@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(. ~/esp/esp-idf/export.sh)",
+      "Bash(source ~/esp/esp-idf/export.sh)",
+      "Bash(idf.py set-target *)",
+      "Bash(idf.py build)",
+      "Bash(idf.py reconfigure)",
+      "Bash(idf.py size*)",
+      "Bash(idf.py clean)",
+      "Bash(idf.py fullclean)",
+      "Bash(idf.py menuconfig)",
+      "Bash(idf.py -T *)",
+      "Bash(esptool.py *)",
+
+      "Bash(git init*)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git show*)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git branch*)",
+      "Bash(git checkout *)",
+      "Bash(git switch *)",
+      "Bash(git restore *)",
+      "Bash(git rm *)",
+      "Bash(git mv *)",
+      "Bash(git config --local *)",
+
+      "Bash(gh repo view*)",
+      "Bash(gh repo create *)",
+      "Bash(gh pr list*)",
+      "Bash(gh pr view*)",
+      "Bash(gh auth status)",
+
+      "Bash(ls*)",
+      "Bash(find firmware*)",
+      "Bash(find docs*)",
+      "Bash(find tests*)",
+      "Bash(find tools*)",
+      "Bash(rm firmware/components/*)",
+      "Bash(rm firmware/main/*)",
+      "Bash(mkdir -p firmware/*)",
+      "Bash(mkdir -p docs)",
+      "Bash(mkdir -p tests)",
+
+      "Bash(python tools/decode_telemetry_frame.py *)"
+    ],
+    "deny": [
+      "Bash(rm -rf /)",
+      "Bash(rm -rf ~)",
+      "Bash(rm -rf ~/esp/*)",
+      "Bash(git push --force*)",
+      "Bash(git push -f *)",
+      "Bash(git commit --no-verify*)",
+      "Bash(git reset --hard*)",
+      "Bash(git clean -fd*)"
+    ]
+  }
+}

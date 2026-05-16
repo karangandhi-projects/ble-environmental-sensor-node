@@ -1,0 +1,3 @@
+# Public headers for the display component (display.h, ssd1306.h, font_big.h)
+# will be added in Phase 1.5. This file exists so the empty include/ directory
+# is tracked by git and the component CMakeLists has a valid INCLUDE_DIRS path.
