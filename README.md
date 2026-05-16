@@ -6,7 +6,7 @@ This repository defines a complete, self-contained BLE learning project for an e
 
 The project is a battery-conscious Bluetooth Low Energy peripheral that exposes environmental telemetry and device control over a custom GATT profile, with a 0.42" SSD1306 OLED on I2C surfacing live state and (simulated) telemetry for benchtop visibility.
 
-<!-- TODO: add GitHub URL here after `gh repo create` completes. -->
+Repository: <https://github.com/karangandhi-projects/ble-environmental-sensor-node> (private).
 
 
 ## Target Platform
