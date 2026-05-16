@@ -17,7 +17,7 @@ Exit criteria:
 - Initial commit is pushed to the private GitHub repo.
 - The four spec docs reflect the new decisions; docs/gatt_profile.md remains untouched.
 
-## Phase 0 — Repo and Toolchain Bring-Up
+## Phase 0 — Repo and Toolchain Bring-Up ✓ DONE (2026-05-16)
 
 Goal: Confirm that the ESP-IDF project structure is valid.
 
@@ -28,15 +28,17 @@ Tasks:
 - Flash and confirm serial logs.
 
 Exit criteria:
-- `idf.py set-target esp32c3` succeeds.
-- `idf.py build` succeeds.
-- Device prints boot log.
+- `idf.py set-target esp32c3` succeeds. ✓
+- `idf.py build` succeeds (ble_env_node.bin 553 KB, 47% of 1 MB partition). ✓
+- Device prints boot log (all 5 init messages confirmed). ✓
+
+Fix: removed local `put_le16`/`put_le32` static defs from `ble_env_service.c`; NimBLE `os/endian.h` already exposes these as macros.
 
 Docs to update:
 - docs/build_and_flash.md (confirm toolchain steps and target selection).
 - tests/manual_test_matrix.md (TC-001 boot row).
 
-## Phase 1 — App State and Simulated Sensor
+## Phase 1 — App State and Simulated Sensor ✓ DONE (2026-05-16)
 
 Goal: Build non-BLE application core first.
 
@@ -47,8 +49,10 @@ Tasks:
 - Add sequence counter.
 
 Exit criteria:
-- Logs show stable simulated readings.
-- No BLE required yet.
+- Logs show stable simulated readings. ✓ (33 samples, seq monotonic, temp 24.50–24.68 °C, humidity 52–52.5 %, pressure 101325–101401 Pa)
+- No BLE required yet. ✓
+
+No code changes required; all behavior was correct from the scaffold.
 
 Docs to update:
 - docs/test_plan.md (Unity tests for app_core init/set_connected/subscribed/next_sequence/set_report_interval/toggle_led; env_sensor init/read).
