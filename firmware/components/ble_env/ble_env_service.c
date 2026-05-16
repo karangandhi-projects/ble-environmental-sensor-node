@@ -24,8 +24,6 @@ static const ble_uuid128_t CONTROL_UUID     = BLE_UUID128_INIT(0x00,0x00,0x00,0x
 static const ble_uuid128_t CONFIG_UUID      = BLE_UUID128_INIT(0x00,0x00,0x00,0x6c,0x6a,0x2f,0x7d,0x8b,0x2a,0x4c,0x4a,0x4f,0x04,0x00,0xe0,0xb7);
 static const ble_uuid128_t STATUS_UUID      = BLE_UUID128_INIT(0x00,0x00,0x00,0x6c,0x6a,0x2f,0x7d,0x8b,0x2a,0x4c,0x4a,0x4f,0x05,0x00,0xe0,0xb7);
 
-static void put_le16(uint8_t *p, uint16_t v) { p[0] = (uint8_t)v; p[1] = (uint8_t)(v >> 8); }
-static void put_le32(uint8_t *p, uint32_t v) { p[0] = (uint8_t)v; p[1] = (uint8_t)(v >> 8); p[2] = (uint8_t)(v >> 16); p[3] = (uint8_t)(v >> 24); }
 
 static void encode_telemetry(uint8_t out[16], const sensor_sample_t *sample, uint16_t sequence)
 {
