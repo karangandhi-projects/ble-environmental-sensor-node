@@ -10,7 +10,9 @@
 cmake_minimum_required(VERSION 3.16)
 
 set(EXTRA_COMPONENT_DIRS "${CMAKE_CURRENT_LIST_DIR}/../components")
-list(APPEND EXTRA_COMPONENT_DIRS $ENV{IDF_PATH}/tools/unit-test-app/components)
-
+list(APPEND EXTRA_COMPONENT_DIRS "${CMAKE_CURRENT_LIST_DIR}/../components/app_core/test")
+list(APPEND EXTRA_COMPONENT_DIRS "${CMAKE_CURRENT_LIST_DIR}/../components/ble_env/test")
+list(APPEND EXTRA_COMPONENT_DIRS "${CMAKE_CURRENT_LIST_DIR}/../components/env_sensor/test")
+list(APPEND EXTRA_COMPONENT_DIRS "${CMAKE_CURRENT_LIST_DIR}/../components/display/test")
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(ble_env_unit_tests)

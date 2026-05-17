@@ -1,6 +1,8 @@
 # ESP-IDF build output
 firmware/build/
 firmware/sdkconfig
+firmware/test_app/build/
+firmware/test_app/sdkconfig
 
 # Python
 __pycache__/

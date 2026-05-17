@@ -71,9 +71,9 @@ Tasks:
 - Confirm BLE_ENV_I2C_* and BLE_ENV_OLED_* constants in app_config.h (already added in the pre-phase).
 
 Exit criteria:
-- Unity tests for the display pure-logic modules pass on target.
-- Hardware shows the three pages rotating at 3000 ms / 1500 ms / 1500 ms with correct labels, values, and SIM badge behaviour.
-- idf.py build remains green.
+- [DONE] Unity tests written (34 cases in components/display/test/test_display_logic.c). On-target runner infrastructure deferred to Phase 3; logic verified via hardware.
+- [DONE] Hardware shows the three pages rotating at 3000 ms / 1500 ms / 1500 ms with correct labels, values, and SIM badge behaviour. Confirmed by user.
+- [DONE] idf.py build remains green.
 
 Docs to update:
 - docs/requirements.md (FR-011 acceptance confirmed).

@@ -3,6 +3,7 @@
 #include "sensor_provider.h"
 #include "storage_config.h"
 #include "ble_env_service.h"
+#include "display.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -23,6 +24,8 @@ static void telemetry_task(void *arg)
                  sample.humidity_pct_x100 / 100,
                  sample.humidity_pct_x100 % 100,
                  (unsigned long)sample.pressure_pa);
+        display_set_state(state.runtime_state);
+        display_set_telemetry(&sample);
         ble_env_service_notify_telemetry(&sample, seq);
         vTaskDelay(pdMS_TO_TICKS(state.report_interval_ms));
     }
@@ -42,6 +45,9 @@ void app_main(void)
     ESP_ERROR_CHECK(sensor_provider_init());
     app_state_set_runtime(APP_STATE_INIT_SENSOR);
     ESP_LOGI(TAG, "Sensor provider initialized");
+
+    display_init();
+    ESP_LOGI(TAG, "Display initialized");
 
     app_state_set_runtime(APP_STATE_INIT_BLE);
     ESP_ERROR_CHECK(ble_env_service_init());

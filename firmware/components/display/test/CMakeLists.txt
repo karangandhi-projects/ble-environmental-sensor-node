@@ -3,6 +3,7 @@
 idf_component_register(
     SRCS
         "test_display_pending.c"
+        "test_display_logic.c"
     INCLUDE_DIRS "."
     REQUIRES display unity
 )
