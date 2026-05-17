@@ -91,8 +91,8 @@ Tasks:
 - Start advertising with Environmental Service UUID.
 
 Exit criteria:
-- Phone sees `BLE_ENV_NODE`.
-- Device reconnects advertising after disconnect.
+- [DONE] Phone sees `BLE_ENV_NODE`. TC-001 passed.
+- [DONE] Device reconnects advertising after disconnect. TC-002 passed.
 
 Docs to update:
 - tests/manual_test_matrix.md (TC-002, TC-009 rows).
@@ -108,8 +108,8 @@ Tasks:
 - Implement basic read handlers.
 
 Exit criteria:
-- nRF Connect shows service and characteristics.
-- Reads return correctly sized payloads.
+- [DONE] nRF Connect shows service and all 4 characteristics with correct UUIDs/properties. TC-003 passed.
+- [DONE] Reads return correctly sized payloads with correct values. TC-004 passed.
 
 Docs to update:
 - docs/gatt_profile.md remains FROZEN — do not edit; cross-check that handlers match it.
