@@ -119,7 +119,7 @@ Docs to update:
 
 ## Phase 4 — Notifications
 
-Goal: Telemetry can stream to a central.
+Goal: Telemetry can stream to a central. [DONE]
 
 Tasks:
 - Track subscription state.
@@ -127,8 +127,8 @@ Tasks:
 - Keep periodic sampling independent from BLE callbacks.
 
 Exit criteria:
-- Telemetry notifications arrive at selected interval.
-- Notifications stop after unsubscribe/disconnect.
+- [DONE] Telemetry notifications arrive at selected interval. TC-005 passed.
+- [DONE] Notifications stop after unsubscribe/disconnect. TC-006 passed.
 
 Docs to update:
 - docs/test_plan.md (TC-006 notification behaviour).
