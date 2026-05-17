@@ -145,8 +145,8 @@ Tasks:
 - Update status and last error.
 
 Exit criteria:
-- Valid commands update LED state.
-- Invalid commands update error status.
+- [DONE] Valid commands update LED state. TC-007 passed.
+- [DONE] Invalid commands update error status. TC-008 passed.
 
 Docs to update:
 - docs/test_plan.md (TC-007, TC-008 control opcode cases).
