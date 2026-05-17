@@ -163,8 +163,8 @@ Tasks:
 - Apply reporting interval dynamically.
 
 Exit criteria:
-- New interval persists after reset.
-- Invalid intervals are rejected.
+- [DONE] New interval persists after reset. TC-009 passed.
+- [DONE] Invalid intervals are rejected. TC-010 passed.
 
 Docs to update:
 - docs/test_plan.md (TC-010, TC-011, TC-012).
