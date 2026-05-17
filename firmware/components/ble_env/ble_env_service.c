@@ -169,20 +169,35 @@ static int gap_event_cb(struct ble_gap_event *event, void *arg)
 
 static void advertise(void)
 {
-    struct ble_hs_adv_fields fields = {0};
-    fields.flags = BLE_HS_ADV_F_DISC_GEN | BLE_HS_ADV_F_BREDR_UNSUP;
-    fields.name = (const uint8_t *)BLE_ENV_DEVICE_NAME;
-    fields.name_len = sizeof(BLE_ENV_DEVICE_NAME) - 1;
-    fields.name_is_complete = 1;
-    fields.uuids128 = &ENV_SERVICE_UUID;
-    fields.num_uuids128 = 1;
-    fields.uuids128_is_complete = 1;
-    ble_gap_adv_set_fields(&fields);
+    // Adv payload: flags + complete name = 17 bytes (fits in 31-byte limit)
+    struct ble_hs_adv_fields adv = {0};
+    adv.flags = BLE_HS_ADV_F_DISC_GEN | BLE_HS_ADV_F_BREDR_UNSUP;
+    adv.name = (const uint8_t *)BLE_ENV_DEVICE_NAME;
+    adv.name_len = sizeof(BLE_ENV_DEVICE_NAME) - 1;
+    adv.name_is_complete = 1;
+    int rc = ble_gap_adv_set_fields(&adv);
+    if (rc != 0) {
+        ESP_LOGE(TAG, "adv_set_fields failed: %d", rc);
+        app_state_set_error(APP_ERROR_BLE);
+        return;
+    }
+
+    // Scan response: UUID128 = 19 bytes (fits in 31-byte limit)
+    struct ble_hs_adv_fields rsp = {0};
+    rsp.uuids128 = &ENV_SERVICE_UUID;
+    rsp.num_uuids128 = 1;
+    rsp.uuids128_is_complete = 1;
+    rc = ble_gap_adv_rsp_set_fields(&rsp);
+    if (rc != 0) {
+        ESP_LOGE(TAG, "rsp_set_fields failed: %d", rc);
+        app_state_set_error(APP_ERROR_BLE);
+        return;
+    }
 
     struct ble_gap_adv_params params = {0};
     params.conn_mode = BLE_GAP_CONN_MODE_UND;
     params.disc_mode = BLE_GAP_DISC_MODE_GEN;
-    int rc = ble_gap_adv_start(BLE_OWN_ADDR_PUBLIC, NULL, BLE_HS_FOREVER, &params, gap_event_cb, NULL);
+    rc = ble_gap_adv_start(BLE_OWN_ADDR_PUBLIC, NULL, BLE_HS_FOREVER, &params, gap_event_cb, NULL);
     if (rc == 0) {
         app_state_set_runtime(APP_STATE_ADVERTISING);
         ESP_LOGI(TAG, "Advertising started as %s", BLE_ENV_DEVICE_NAME);
