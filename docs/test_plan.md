@@ -30,6 +30,12 @@ Pure-logic modules are exercised with ESP-IDF Unity through the firmware/test_ap
 - Humidity formatter renders the latest reading in the expected layout. [pending]
 - SIM badge is visible on pages B and C iff BLE_ENV_FLAG_SIMULATED_DATA is set. [pending]
 
+### ble_env (security — manual only, NimBLE callbacks exempt from Unity TDD)
+- TC-SEC-01: write Control without pairing → ATT error "Insufficient Authentication (0x05)".
+- TC-SEC-02: pair via Just Works → write Control succeeds.
+- TC-SEC-03: disconnect and reconnect → encryption restored, write succeeds without re-pairing.
+- TC-SEC-04: clear bond on central, reconnect → pairing prompt → re-pair → write succeeds.
+
 ## Test Strategy
 
 Testing is split into:

@@ -205,17 +205,23 @@ Docs updated:
 Goal: Introduce pairing/bonding.
 
 Tasks:
-- Enable bonding.
-- Require encryption for control/config writes.
+- Enable bonding (Just Works, `BLE_HS_IO_NO_INPUT_OUTPUT`, Secure Connections). ✓
+- Require encryption for Control writes and Config reads+writes. ✓
+- Persist bond keys in NVS (`CONFIG_BT_NIMBLE_NVS_PERSIST=y`). ✓
+- Handle repeat-pairing and encryption-change GAP events. ✓
 - Test reconnect after bonding.
 
 Exit criteria:
-- Writes require encrypted link when security enabled.
-- Bonded reconnect works.
+- [DONE] `idf.py build` green (0x92240 bytes, 43% flash).
+- Control/Config writes rejected without encryption (ATT 0x05). [hardware pending]
+- Just Works pairing completes in nRF Connect. [hardware pending]
+- Bonded reconnect restores encryption without re-pairing. [hardware pending]
+- Re-pairing after bond delete works. [hardware pending]
 
 Docs to update:
-- docs/security_model.md (final pairing/bonding posture and encryption requirements).
-- docs/test_plan.md (add encrypted-write negative test).
+- docs/security_model.md — final pairing/bonding posture documented. ✓
+- docs/gatt_profile.md — security requirements per characteristic added. ✓
+- docs/test_plan.md — TC-SEC-01..TC-SEC-04 added. ✓
 
 ## Phase 9 — Real Sensor Adapter
 

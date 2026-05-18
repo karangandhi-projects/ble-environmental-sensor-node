@@ -10,6 +10,8 @@
 #include "host/ble_uuid.h"
 #include "host/ble_gatt.h"
 #include "host/ble_gap.h"
+#include "host/ble_sm.h"
+#include "host/ble_store.h"
 #include "services/gap/ble_svc_gap.h"
 #include "services/gatt/ble_svc_gatt.h"
 #include "nimble/nimble_port.h"
@@ -173,8 +175,8 @@ static const struct ble_gatt_svc_def gatt_svcs[] = {
         .uuid = &ENV_SERVICE_UUID.u,
         .characteristics = (struct ble_gatt_chr_def[]) {
             { .uuid = &TELEMETRY_UUID.u, .access_cb = gatt_access_cb, .val_handle = &s_telemetry_val_handle, .flags = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_NOTIFY },
-            { .uuid = &CONTROL_UUID.u, .access_cb = gatt_access_cb, .flags = BLE_GATT_CHR_F_WRITE },
-            { .uuid = &CONFIG_UUID.u, .access_cb = gatt_access_cb, .flags = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_WRITE },
+            { .uuid = &CONTROL_UUID.u, .access_cb = gatt_access_cb, .flags = BLE_GATT_CHR_F_WRITE | BLE_GATT_CHR_F_WRITE_ENC },
+            { .uuid = &CONFIG_UUID.u, .access_cb = gatt_access_cb, .flags = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_WRITE | BLE_GATT_CHR_F_READ_ENC | BLE_GATT_CHR_F_WRITE_ENC },
             { .uuid = &STATUS_UUID.u, .access_cb = gatt_access_cb, .val_handle = &s_status_val_handle, .flags = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_NOTIFY },
             { 0 }
         },
@@ -227,6 +229,21 @@ static int gap_event_cb(struct ble_gap_event *event, void *arg)
                 app_state_set_status_subscribed(event->subscribe.cur_notify);
             }
             break;
+        case BLE_GAP_EVENT_ENC_CHANGE:
+            if (event->enc_change.status == 0) {
+                ESP_LOGI(TAG, "Encryption established (conn %u)",
+                         event->enc_change.conn_handle);
+            } else {
+                ESP_LOGW(TAG, "Encryption failed (conn %u, status %d)",
+                         event->enc_change.conn_handle, event->enc_change.status);
+            }
+            return 0;
+        case BLE_GAP_EVENT_REPEAT_PAIRING: {
+            struct ble_gap_conn_desc desc;
+            ble_gap_conn_find(event->repeat_pairing.conn_handle, &desc);
+            ble_store_util_delete_peer(&desc.peer_id_addr);
+            return BLE_GAP_REPEAT_PAIRING_RETRY;
+        }
         default:
             break;
     }
@@ -307,6 +324,14 @@ esp_err_t ble_env_service_init(void)
         .name = "deep_sleep",
     };
     esp_timer_create(&ta, &s_deep_sleep_timer);
+
+    ble_hs_cfg.sm_io_cap         = BLE_HS_IO_NO_INPUT_OUTPUT;
+    ble_hs_cfg.sm_bonding        = 1;
+    ble_hs_cfg.sm_mitm           = 0;
+    ble_hs_cfg.sm_sc             = 1;
+    ble_hs_cfg.sm_our_key_dist   = BLE_SM_PAIR_KEY_DIST_ENC | BLE_SM_PAIR_KEY_DIST_ID;
+    ble_hs_cfg.sm_their_key_dist = BLE_SM_PAIR_KEY_DIST_ENC | BLE_SM_PAIR_KEY_DIST_ID;
+    ble_hs_cfg.store_status_cb   = ble_store_util_status_rr;
 
     nimble_port_init();
     ble_svc_gap_init();

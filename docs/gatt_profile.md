@@ -130,6 +130,19 @@ Payload:
 | 4 | 1 | led_state | uint8 |
 | 5 | 1 | sensor_valid | uint8 |
 
+## Security Requirements (Phase 8)
+
+Link-layer encryption is required for the following operations. NimBLE enforces this at the ATT layer and returns ATT error `0x05` (Insufficient Authentication) if the connection is not encrypted. This triggers the central to initiate pairing (Just Works, no PIN).
+
+| Characteristic | Read | Write |
+|---|---|---|
+| Telemetry | open | — |
+| Control | — | **encrypted** |
+| Config | **encrypted** | **encrypted** |
+| Status | open | — |
+
+Pairing method: Just Works (`BLE_HS_IO_NO_INPUT_OUTPUT`). Bonding enabled; keys persisted in NVS. Bonded centrals reconnect with encryption restored automatically.
+
 ## Standard Services Optional
 
 Add later:
