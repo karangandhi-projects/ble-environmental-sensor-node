@@ -95,8 +95,8 @@ void display_set_power(display_power_t power)
             s_last_page = 0xFF;         /* force re-render on next tick */
             break;
         case DISPLAY_POWER_DIM:
-            oled_cmd2(0x81, 0x00);     /* SET_CONTRAST: minimum brightness */
             oled_cmd1(0xAF);            /* DISPLAYON in case it was off */
+            oled_cmd2(0x81, 0x05);     /* SET_CONTRAST: ~2% — lowest visible on 0.42" SSD1306 */
             break;
     }
 }

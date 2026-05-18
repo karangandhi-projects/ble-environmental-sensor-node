@@ -34,15 +34,19 @@ static void telemetry_task(void *arg)
         /* Apply power mode transitions once per sample cycle. */
         app_power_mode_t mode = app_state_get_power_mode();
         if (mode != prev_mode) {
+            bool is_light = (mode == POWER_MODE_LIGHT_SLEEP);
             esp_pm_config_t pm = {
                 .max_freq_mhz       = CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ,
-                .min_freq_mhz       = (mode == POWER_MODE_LIGHT_SLEEP)
-                                      ? 10 : CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ,
-                .light_sleep_enable = (mode == POWER_MODE_LIGHT_SLEEP),
+                .min_freq_mhz       = is_light ? 40 : CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ,
+                .light_sleep_enable = is_light,
             };
-            if (esp_pm_configure(&pm) == ESP_OK) {
+            esp_err_t err = esp_pm_configure(&pm);
+            if (err == ESP_OK) {
                 ESP_LOGI(TAG, "Power mode → %s",
-                         mode == POWER_MODE_LIGHT_SLEEP ? "LIGHT_SLEEP" : "ACTIVE");
+                         is_light ? "LIGHT_SLEEP" : "ACTIVE");
+            } else {
+                ESP_LOGW(TAG, "esp_pm_configure failed (mode=%d): %s",
+                         mode, esp_err_to_name(err));
             }
             prev_mode = mode;
         }

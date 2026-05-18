@@ -123,13 +123,15 @@ These values are now explicitly set in firmware (previously defaults).
 | Mode | Effect | Current impact |
 |------|--------|----------------|
 | Active (0x00) | Normal operation | ~3–8 mA (OLED-dominated) |
-| Light sleep (0x01) | CPU sleeps between BLE events; CONFIG_PM_ENABLE required | ~1–4 mA (radio duty-cycled by NimBLE) |
+| Light sleep (0x01) | BLE modem sleep active (radio off between events); CPU sleep blocked by BLE stack on ESP32-C3 | ~1–4 mA (radio duty-cycled) |
 | Deep sleep (0x02) | BLE disconnects, device sleeps 30 s, re-advertises on wake | ~20–100 µA |
 
 Light sleep notes:
-- Enabled via `CONFIG_PM_ENABLE=y` and `esp_pm_configure()` with `light_sleep_enable=true`.
-- ESP32-C3 BLE controller manages modem sleep automatically during connection events.
-- FreeRTOS tick timer remains active in light sleep; I2C/display operations are unaffected.
+- Enabled via `CONFIG_PM_ENABLE=y` + `CONFIG_FREERTOS_USE_TICKLESS_IDLE=y` and `esp_pm_configure()` with `light_sleep_enable=true`.
+- **ESP32-C3 limitation**: the BLE controller holds a `NO_LIGHT_SLEEP` PM power lock while BLE is active. This prevents CPU-level light sleep during an active BLE session. The firmware accepts opcode 0x20 0x01 without error, and `esp_pm_configure()` returns `ESP_OK`, but you will see the warning `BLE_INIT: light sleep mode will not be able to apply when bluetooth is enabled` in the serial log.
+- **What IS active**: BLE modem sleep (`CONFIG_BT_CTRL_MODEM_SLEEP=y` + `CONFIG_BT_CTRL_MODEM_SLEEP_MODE_1=y`). The radio turns off between connection events automatically. This is the meaningful power saving during a BLE connection on ESP32-C3.
+- CPU light sleep becomes available only after BLE is deinitialized (i.e., after deep sleep wakeup in advertising state, or in a non-BLE application).
+- FreeRTOS tick timer remains active; I2C/display operations are unaffected.
 - BLE connection is maintained (no disconnect).
 
 Deep sleep notes:
@@ -143,8 +145,10 @@ Deep sleep notes:
 | Command | SSD1306 operation | Panel current |
 |---------|-------------------|---------------|
 | Off (0x00) | DISPLAYOFF (0xAE) | ~20 µA |
-| On (0x01) | DISPLAYON (0xAF) + restore contrast | ~5–10 mA |
-| Dim (0x02) | SET_CONTRAST 0x00 | ~1–2 mA |
+| On (0x01) | DISPLAYON (0xAF) + restore contrast (0xCF) | ~5–10 mA |
+| Dim (0x02) | SET_CONTRAST 0x05 (~2%) | ~1–2 mA |
+
+Note on dim: the 0.42" SSD1306 panel has a very narrow effective contrast range. Values below ~0x05 are invisible at normal viewing angles; 0x05 is the practical minimum for a visible dim state.
 
 Persistent preference: Config flags bit 1 = 1 → display off after every boot (NVS-backed).
 Runtime override: opcode 0x30 overrides the boot preference for the current session.
