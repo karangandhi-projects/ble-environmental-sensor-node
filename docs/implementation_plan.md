@@ -171,23 +171,34 @@ Docs to update:
 - tests/manual_test_matrix.md (TC-010, TC-011 rows; add TC-012 if not present).
 - docs/design_decisions.md if validation policy or bounds change.
 
-## Phase 7 — Power Awareness
+## Phase 7 — Power Awareness ✓ DONE (2026-05-18)
 
-Goal: Understand and document power tradeoffs.
+Goal: Understand, document, and implement power tradeoffs.
 
 Tasks:
-- Tune advertising interval.
-- Tune connection interval request.
-- Add notes for light sleep compatibility.
-- Measure approximate current if hardware/tools available.
+- Tune advertising interval (250 ms explicit, was implicit ~100 ms default). ✓
+- Tune connection interval request (500–1000 ms preferred, slave latency 0). ✓
+- Add BLE-controlled power modes: active / light sleep / deep sleep (opcode 0x20). ✓
+- Add BLE-controlled display power: on / off / dim (opcode 0x30); persistent via Config flags bit 1. ✓
+- Implement force-sample opcode 0x10. ✓
+- Enable CONFIG_PM_ENABLE for esp_pm_configure() (light sleep). ✓
+- Document power notes and tradeoffs. ✓
 
 Exit criteria:
-- Power notes updated.
-- Tradeoffs documented.
+- [DONE] idf.py build green (ble_env_node.bin 0x8f060 bytes, 44% of flash).
+- [DONE] docs/power_budget.md updated with Phase 7 Configuration section.
+- [DONE] docs/design_decisions.md updated (DD-015).
+- [DONE] docs/gatt_profile.md updated (opcodes 0x10, 0x20, 0x30; Config flags bit 1).
 
-Docs to update:
-- docs/power_budget.md (latest intervals and measurements).
-- docs/design_decisions.md if intervals or sleep posture change.
+Manual verification pending (hardware):
+- TC-001: device still discoverable at 250 ms interval.
+- Opcodes 0x10, 0x20 0x00/0x01/0x02, 0x30 0x00/0x01/0x02 functional.
+- Config flags bit 1 persists display-off across reset.
+
+Docs updated:
+- docs/power_budget.md (Phase 7 Configuration section).
+- docs/design_decisions.md (DD-015).
+- docs/gatt_profile.md (opcodes and Config flags).
 
 ## Phase 8 — Security
 

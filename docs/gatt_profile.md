@@ -73,9 +73,17 @@ Opcodes:
 - `0x01`: LED off, value ignored
 - `0x02`: LED on, value ignored
 - `0x03`: LED toggle, value ignored
-- `0x10`: force telemetry sample, value ignored
+- `0x10`: force immediate telemetry sample + notify, value ignored
+- `0x20`: set power mode, value = mode byte:
+  - `0x00`: active (normal operation, cancel any pending sleep)
+  - `0x01`: light sleep (CPU sleeps between BLE events, connection maintained)
+  - `0x02`: deep sleep (device disconnects BLE, sleeps 30 s, re-advertises on wake)
+- `0x30`: set display power, value = state byte:
+  - `0x00`: display off (SSD1306 DISPLAYOFF, ~20 µA panel current, ephemeral)
+  - `0x01`: display on (SSD1306 DISPLAYON, restores last frame)
+  - `0x02`: display dim (minimum contrast, panel remains on)
 
-Invalid opcodes update status last_error to invalid command.
+Invalid opcodes or invalid value bytes update status last_error to invalid command.
 
 ### Configuration Characteristic
 
@@ -100,7 +108,7 @@ Allowed report interval:
 
 Flags:
 - bit 0: notifications enabled by default after reconnect, reserved for future behavior
-- bit 1: low-power preference
+- bit 1: display off by default on boot (low-power preference); overridable at runtime via opcode 0x30
 - bits 2-7: reserved
 
 ### Status Characteristic

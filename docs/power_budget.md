@@ -101,6 +101,66 @@ Product settings should prioritize battery:
 5. Measure effect of logging disabled.
 6. Measure effect of LED disabled.
 
+## Phase 7 Configuration
+
+These values are now explicitly set in firmware (previously defaults).
+
+### Advertising interval
+
+- Configured: 250 ms (NimBLE units: 400 × 0.625 ms = 250 ms)
+- Previous: NimBLE default ~100 ms (implicit, zero-initialized)
+- Effect: halves advertising radio duty cycle; discovery still <1 s in typical environments
+
+### Connection interval
+
+- Peripheral preference: 500–1000 ms (NimBLE units: 400–800 × 1.25 ms)
+- Slave latency: 0 (no latency — control commands remain responsive)
+- Supervision timeout: 4000 ms (NimBLE units: 400 × 10 ms)
+- Note: central may accept, reject, or negotiate different values; the peripheral only requests
+
+### Power mode commands (BLE-controlled, opcode 0x20)
+
+| Mode | Effect | Current impact |
+|------|--------|----------------|
+| Active (0x00) | Normal operation | ~3–8 mA (OLED-dominated) |
+| Light sleep (0x01) | CPU sleeps between BLE events; CONFIG_PM_ENABLE required | ~1–4 mA (radio duty-cycled by NimBLE) |
+| Deep sleep (0x02) | BLE disconnects, device sleeps 30 s, re-advertises on wake | ~20–100 µA |
+
+Light sleep notes:
+- Enabled via `CONFIG_PM_ENABLE=y` and `esp_pm_configure()` with `light_sleep_enable=true`.
+- ESP32-C3 BLE controller manages modem sleep automatically during connection events.
+- FreeRTOS tick timer remains active in light sleep; I2C/display operations are unaffected.
+- BLE connection is maintained (no disconnect).
+
+Deep sleep notes:
+- Device sends a disconnect to the central (BLE_ERR_REM_USER_CONN_TERM).
+- After 30 s, chip reboots, re-runs app_main, and re-advertises.
+- All volatile state (power mode, display state) resets to defaults on wake.
+- NVS-backed config (report interval, display flag) survives deep sleep.
+
+### Display power commands (BLE-controlled, opcode 0x30)
+
+| Command | SSD1306 operation | Panel current |
+|---------|-------------------|---------------|
+| Off (0x00) | DISPLAYOFF (0xAE) | ~20 µA |
+| On (0x01) | DISPLAYON (0xAF) + restore contrast | ~5–10 mA |
+| Dim (0x02) | SET_CONTRAST 0x00 | ~1–2 mA |
+
+Persistent preference: Config flags bit 1 = 1 → display off after every boot (NVS-backed).
+Runtime override: opcode 0x30 overrides the boot preference for the current session.
+
+### Estimated current budget (no power analyser; rough bench estimates)
+
+| State | Estimated current |
+|-------|-------------------|
+| Advertising (250 ms interval), display on | 3–8 mA |
+| Connected, display on, notifications | 6–10 mA |
+| Connected, display off | 0.5–2 mA |
+| Light sleep, display off | <1 mA |
+| Deep sleep | 20–100 µA |
+
+OLED is the dominant load during all non-deep-sleep states.
+
 ## Power Optimization Checklist
 
 - Increase advertising interval.

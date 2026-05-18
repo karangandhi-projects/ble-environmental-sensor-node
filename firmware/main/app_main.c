@@ -5,6 +5,7 @@
 #include "ble_env_service.h"
 #include "display.h"
 #include "esp_log.h"
+#include "esp_pm.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
@@ -12,6 +13,8 @@ static const char *TAG = "app_main";
 
 static void telemetry_task(void *arg)
 {
+    static app_power_mode_t prev_mode = POWER_MODE_ACTIVE;
+
     while (true) {
         app_state_t state = app_state_get_snapshot();
         sensor_sample_t sample = sensor_provider_read();
@@ -27,7 +30,27 @@ static void telemetry_task(void *arg)
         display_set_state(state.runtime_state);
         display_set_telemetry(&sample);
         ble_env_service_notify_telemetry(&sample, seq);
-        vTaskDelay(pdMS_TO_TICKS(state.report_interval_ms));
+
+        /* Apply power mode transitions once per sample cycle. */
+        app_power_mode_t mode = app_state_get_power_mode();
+        if (mode != prev_mode) {
+            esp_pm_config_t pm = {
+                .max_freq_mhz       = CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ,
+                .min_freq_mhz       = (mode == POWER_MODE_LIGHT_SLEEP)
+                                      ? 10 : CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ,
+                .light_sleep_enable = (mode == POWER_MODE_LIGHT_SLEEP),
+            };
+            if (esp_pm_configure(&pm) == ESP_OK) {
+                ESP_LOGI(TAG, "Power mode → %s",
+                         mode == POWER_MODE_LIGHT_SLEEP ? "LIGHT_SLEEP" : "ACTIVE");
+            }
+            prev_mode = mode;
+        }
+
+        /* Skip delay if a force-sample was requested during this interval. */
+        if (!app_state_get_and_clear_force_sample()) {
+            vTaskDelay(pdMS_TO_TICKS(state.report_interval_ms));
+        }
     }
 }
 
@@ -48,6 +71,13 @@ void app_main(void)
 
     display_init();
     ESP_LOGI(TAG, "Display initialized");
+
+    /* Apply persistent display-off preference from NVS config flags. */
+    if (cfg.flags & BLE_ENV_CONFIG_FLAG_DISPLAY_OFF) {
+        display_set_power(DISPLAY_POWER_OFF);
+        app_state_set_display_on(false);
+        ESP_LOGI(TAG, "Display off (low-power preference)");
+    }
 
     app_state_set_runtime(APP_STATE_INIT_BLE);
     ESP_ERROR_CHECK(ble_env_service_init());

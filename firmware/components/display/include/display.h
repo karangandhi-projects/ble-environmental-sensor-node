@@ -4,8 +4,18 @@
 #include "app_state.h"
 #include "sensor_provider.h"
 
+typedef enum {
+    DISPLAY_POWER_OFF = 0,
+    DISPLAY_POWER_ON  = 1,
+    DISPLAY_POWER_DIM = 2,
+} display_power_t;
+
 /* Called from app_main once at boot. Inits SSD1306 and starts internal 50ms timer. */
 void display_init(void);
+
+/* Set display power state. DISPLAYOFF blanks panel (~20 µA), DISPLAYON restores it,
+   DIM reduces contrast to minimum. Safe to call from any task or BLE callback. */
+void display_set_power(display_power_t power);
 
 /* Thread-safe setters (called from telemetry_task or app_main). */
 void display_set_state(app_runtime_state_t state);

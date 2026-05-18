@@ -6,6 +6,7 @@
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "driver/i2c.h"
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -62,6 +63,42 @@ void display_format_humidity(uint16_t humidity_pct_x100, char *buf, uint8_t buf_
 bool display_should_show_sim_badge(uint8_t telemetry_flags)
 {
     return (telemetry_flags & BLE_ENV_FLAG_SIMULATED_DATA) != 0;
+}
+
+/* ---------- Display power control ---------- */
+
+/* Send a 1-byte SSD1306 command over I2C.
+   Control byte 0x00: Co=0, D/C#=0 → command mode. */
+static void oled_cmd1(uint8_t cmd)
+{
+    uint8_t buf[2] = { 0x00, cmd };
+    i2c_master_write_to_device(I2C_NUM_0, BLE_ENV_OLED_I2C_ADDR,
+                               buf, sizeof(buf), pdMS_TO_TICKS(10));
+}
+
+static void oled_cmd2(uint8_t cmd, uint8_t arg)
+{
+    uint8_t buf[3] = { 0x00, cmd, arg };
+    i2c_master_write_to_device(I2C_NUM_0, BLE_ENV_OLED_I2C_ADDR,
+                               buf, sizeof(buf), pdMS_TO_TICKS(10));
+}
+
+void display_set_power(display_power_t power)
+{
+    switch (power) {
+        case DISPLAY_POWER_OFF:
+            oled_cmd1(0xAE);            /* DISPLAYOFF — panel off, GRAM preserved */
+            break;
+        case DISPLAY_POWER_ON:
+            oled_cmd2(0x81, 0xCF);     /* SET_CONTRAST: restore init value */
+            oled_cmd1(0xAF);            /* DISPLAYON — last GRAM frame reappears */
+            s_last_page = 0xFF;         /* force re-render on next tick */
+            break;
+        case DISPLAY_POWER_DIM:
+            oled_cmd2(0x81, 0x00);     /* SET_CONTRAST: minimum brightness */
+            oled_cmd1(0xAF);            /* DISPLAYON in case it was off */
+            break;
+    }
 }
 
 /* ---------- Internal timer callback ---------- */

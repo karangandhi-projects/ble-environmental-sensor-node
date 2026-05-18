@@ -2,8 +2,10 @@
 #include "app_config.h"
 #include "app_state.h"
 #include "storage_config.h"
+#include "display.h"
 #include "esp_log.h"
 #include "esp_timer.h"
+#include "esp_sleep.h"
 #include "host/ble_hs.h"
 #include "host/ble_uuid.h"
 #include "host/ble_gatt.h"
@@ -17,6 +19,7 @@ static const char *TAG = "ble_env";
 static uint16_t s_conn_handle = BLE_HS_CONN_HANDLE_NONE;
 static uint16_t s_telemetry_val_handle;
 static uint16_t s_status_val_handle;
+static esp_timer_handle_t s_deep_sleep_timer;
 
 static const ble_uuid128_t ENV_SERVICE_UUID = BLE_UUID128_INIT(0x00,0x00,0x00,0x6c,0x6a,0x2f,0x7d,0x8b,0x2a,0x4c,0x4a,0x4f,0x01,0x00,0xe0,0xb7);
 static const ble_uuid128_t TELEMETRY_UUID   = BLE_UUID128_INIT(0x00,0x00,0x00,0x6c,0x6a,0x2f,0x7d,0x8b,0x2a,0x4c,0x4a,0x4f,0x02,0x00,0xe0,0xb7);
@@ -104,9 +107,55 @@ static int gatt_access_cb(uint16_t conn_handle, uint16_t attr_handle,
         ble_hs_mbuf_to_flat(ctxt->om, buf, sizeof(buf), NULL);
         switch (buf[0]) {
             case 0x01: app_state_set_led(false); app_state_set_error(APP_ERROR_OK); break;
-            case 0x02: app_state_set_led(true); app_state_set_error(APP_ERROR_OK); break;
-            case 0x03: app_state_toggle_led(); app_state_set_error(APP_ERROR_OK); break;
-            case 0x10: app_state_set_error(APP_ERROR_OK); break;
+            case 0x02: app_state_set_led(true);  app_state_set_error(APP_ERROR_OK); break;
+            case 0x03: app_state_toggle_led();   app_state_set_error(APP_ERROR_OK); break;
+            case BLE_ENV_CMD_FORCE_SAMPLE:
+                app_state_set_force_sample();
+                app_state_set_error(APP_ERROR_OK);
+                break;
+            case BLE_ENV_CMD_SET_POWER_MODE:
+                switch (buf[1]) {
+                    case BLE_ENV_POWER_MODE_ACTIVE:
+                        app_state_set_power_mode(POWER_MODE_ACTIVE);
+                        app_state_set_error(APP_ERROR_OK);
+                        break;
+                    case BLE_ENV_POWER_MODE_LIGHT_SLEEP:
+                        app_state_set_power_mode(POWER_MODE_LIGHT_SLEEP);
+                        app_state_set_error(APP_ERROR_OK);
+                        break;
+                    case BLE_ENV_POWER_MODE_DEEP_SLEEP:
+                        app_state_request_deep_sleep();
+                        app_state_set_error(APP_ERROR_OK);
+                        /* Disconnect after 500 ms so the write response completes first. */
+                        esp_timer_start_once(s_deep_sleep_timer, 500 * 1000);
+                        break;
+                    default:
+                        app_state_set_error(APP_ERROR_INVALID_COMMAND);
+                        return BLE_ATT_ERR_UNLIKELY;
+                }
+                break;
+            case BLE_ENV_CMD_SET_DISPLAY:
+                switch (buf[1]) {
+                    case BLE_ENV_DISPLAY_OFF:
+                        display_set_power(DISPLAY_POWER_OFF);
+                        app_state_set_display_on(false);
+                        app_state_set_error(APP_ERROR_OK);
+                        break;
+                    case BLE_ENV_DISPLAY_ON:
+                        display_set_power(DISPLAY_POWER_ON);
+                        app_state_set_display_on(true);
+                        app_state_set_error(APP_ERROR_OK);
+                        break;
+                    case BLE_ENV_DISPLAY_DIM:
+                        display_set_power(DISPLAY_POWER_DIM);
+                        app_state_set_display_on(true);
+                        app_state_set_error(APP_ERROR_OK);
+                        break;
+                    default:
+                        app_state_set_error(APP_ERROR_INVALID_COMMAND);
+                        return BLE_ATT_ERR_UNLIKELY;
+                }
+                break;
             default:
                 app_state_set_error(APP_ERROR_INVALID_COMMAND);
                 return BLE_ATT_ERR_UNLIKELY;
@@ -143,6 +192,16 @@ static int gap_event_cb(struct ble_gap_event *event, void *arg)
                 s_conn_handle = event->connect.conn_handle;
                 app_state_set_connected(true);
                 ESP_LOGI(TAG, "Connected");
+                /* Request preferred connection interval (central may accept or negotiate). */
+                struct ble_gap_upd_params upd = {
+                    .itvl_min            = BLE_ENV_CONN_ITVL_MIN_UNITS,
+                    .itvl_max            = BLE_ENV_CONN_ITVL_MAX_UNITS,
+                    .latency             = BLE_ENV_CONN_LATENCY,
+                    .supervision_timeout = BLE_ENV_CONN_SUPERVISION_UNITS,
+                    .min_ce_len          = BLE_GAP_INITIAL_CONN_MIN_CE_LEN,
+                    .max_ce_len          = BLE_GAP_INITIAL_CONN_MAX_CE_LEN,
+                };
+                ble_gap_update_params(s_conn_handle, &upd);
             } else {
                 ESP_LOGW(TAG, "Connect failed; restarting advertising");
                 advertise();
@@ -152,7 +211,14 @@ static int gap_event_cb(struct ble_gap_event *event, void *arg)
             ESP_LOGI(TAG, "Disconnected");
             s_conn_handle = BLE_HS_CONN_HANDLE_NONE;
             app_state_set_connected(false);
-            advertise();
+            if (app_state_get_deep_sleep_pending()) {
+                app_state_clear_deep_sleep_pending();
+                ESP_LOGI(TAG, "Entering deep sleep for 30 s");
+                esp_sleep_enable_timer_wakeup(BLE_ENV_DEEP_SLEEP_DURATION_US);
+                esp_deep_sleep_start();
+            } else {
+                advertise();
+            }
             break;
         case BLE_GAP_EVENT_SUBSCRIBE:
             if (event->subscribe.attr_handle == s_telemetry_val_handle) {
@@ -197,6 +263,8 @@ static void advertise(void)
     struct ble_gap_adv_params params = {0};
     params.conn_mode = BLE_GAP_CONN_MODE_UND;
     params.disc_mode = BLE_GAP_DISC_MODE_GEN;
+    params.itvl_min  = BLE_ENV_ADV_ITVL_UNITS;
+    params.itvl_max  = BLE_ENV_ADV_ITVL_UNITS;
     rc = ble_gap_adv_start(BLE_OWN_ADDR_PUBLIC, NULL, BLE_HS_FOREVER, &params, gap_event_cb, NULL);
     if (rc == 0) {
         app_state_set_runtime(APP_STATE_ADVERTISING);
@@ -212,6 +280,19 @@ static void on_sync(void)
     advertise();
 }
 
+static void deep_sleep_timer_cb(void *arg)
+{
+    if (s_conn_handle != BLE_HS_CONN_HANDLE_NONE) {
+        ble_gap_terminate(s_conn_handle, BLE_ERR_REM_USER_CONN_TERM);
+        /* Deep sleep triggered from gap_event_cb on disconnect. */
+    } else {
+        /* Already disconnected, sleep immediately. */
+        ESP_LOGI(TAG, "Entering deep sleep for 30 s (already disconnected)");
+        esp_sleep_enable_timer_wakeup(BLE_ENV_DEEP_SLEEP_DURATION_US);
+        esp_deep_sleep_start();
+    }
+}
+
 static void nimble_host_task(void *param)
 {
     nimble_port_run();
@@ -220,6 +301,13 @@ static void nimble_host_task(void *param)
 
 esp_err_t ble_env_service_init(void)
 {
+    esp_timer_create_args_t ta = {
+        .callback = deep_sleep_timer_cb,
+        .arg = NULL,
+        .name = "deep_sleep",
+    };
+    esp_timer_create(&ta, &s_deep_sleep_timer);
+
     nimble_port_init();
     ble_svc_gap_init();
     ble_svc_gatt_init();

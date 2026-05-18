@@ -19,6 +19,10 @@ void app_state_init(uint16_t report_interval_ms)
         .sensor_valid = true,
         .telemetry_sequence = 0,
         .report_interval_ms = report_interval_ms,
+        .power_mode = POWER_MODE_ACTIVE,
+        .deep_sleep_pending = false,
+        .display_on = true,
+        .force_sample = false,
     };
     portEXIT_CRITICAL(&s_lock);
 }
@@ -117,4 +121,72 @@ esp_err_t app_state_set_report_interval(uint16_t interval_ms)
     s_state.last_error = APP_ERROR_OK;
     portEXIT_CRITICAL(&s_lock);
     return ESP_OK;
+}
+
+void app_state_set_power_mode(app_power_mode_t mode)
+{
+    portENTER_CRITICAL(&s_lock);
+    s_state.power_mode = mode;
+    portEXIT_CRITICAL(&s_lock);
+}
+
+app_power_mode_t app_state_get_power_mode(void)
+{
+    portENTER_CRITICAL(&s_lock);
+    app_power_mode_t m = s_state.power_mode;
+    portEXIT_CRITICAL(&s_lock);
+    return m;
+}
+
+void app_state_request_deep_sleep(void)
+{
+    portENTER_CRITICAL(&s_lock);
+    s_state.deep_sleep_pending = true;
+    portEXIT_CRITICAL(&s_lock);
+}
+
+void app_state_clear_deep_sleep_pending(void)
+{
+    portENTER_CRITICAL(&s_lock);
+    s_state.deep_sleep_pending = false;
+    portEXIT_CRITICAL(&s_lock);
+}
+
+bool app_state_get_deep_sleep_pending(void)
+{
+    portENTER_CRITICAL(&s_lock);
+    bool v = s_state.deep_sleep_pending;
+    portEXIT_CRITICAL(&s_lock);
+    return v;
+}
+
+void app_state_set_display_on(bool on)
+{
+    portENTER_CRITICAL(&s_lock);
+    s_state.display_on = on;
+    portEXIT_CRITICAL(&s_lock);
+}
+
+bool app_state_get_display_on(void)
+{
+    portENTER_CRITICAL(&s_lock);
+    bool v = s_state.display_on;
+    portEXIT_CRITICAL(&s_lock);
+    return v;
+}
+
+void app_state_set_force_sample(void)
+{
+    portENTER_CRITICAL(&s_lock);
+    s_state.force_sample = true;
+    portEXIT_CRITICAL(&s_lock);
+}
+
+bool app_state_get_and_clear_force_sample(void)
+{
+    portENTER_CRITICAL(&s_lock);
+    bool v = s_state.force_sample;
+    s_state.force_sample = false;
+    portEXIT_CRITICAL(&s_lock);
+    return v;
 }

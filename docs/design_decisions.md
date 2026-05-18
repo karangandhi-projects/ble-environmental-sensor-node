@@ -142,6 +142,23 @@ Reason:
 Tradeoff:
 - Sub-agents lack the orchestrator's full context, so prompts must be self-contained. Co-edits to the same file must be serialized.
 
+## DD-015 Explicit Power Interval Tuning, Sleep Modes, and Display Power Control
+
+Decision: Set advertising interval to 250 ms and request a 500–1000 ms preferred connection interval on every connect. Expose power mode (active / light sleep / deep sleep) and display state (on / off / dim) via BLE Control characteristic writes, using the same opcode pattern established for LED control.
+
+Reason:
+
+- **Advertising interval (250 ms)**: halves radio duty cycle vs the NimBLE default ~100 ms; discovery still completes in <1 s so developer UX is not impacted. Explicitly chosen so the intent is documented and traceable.
+- **Preferred connection interval (500–1000 ms)**: aligns with sensor-monitoring use case from power_budget.md. Slave latency kept at 0 so control characteristic writes feel instant.
+- **Power mode via opcode 0x20**: reuses the existing Control characteristic, no new GATT characteristics needed. Deep sleep disconnects BLE and wakes after 30 s via timer — demonstrable in a portfolio context. Light sleep (opcode 0x01) uses `CONFIG_PM_ENABLE` + `esp_pm_configure()` and keeps the BLE connection alive.
+- **Display power via opcode 0x30**: SSD1306 DISPLAYOFF drops panel current from ~5–10 mA to ~20 µA. Ephemeral (opcode 0x30) for runtime control, persistent (Config flags bit 1) for boot-time preference — mirrors the report_interval pattern (live control + NVS persistence).
+
+Tradeoff:
+
+- A central can negotiate a shorter connection interval than requested; the device cannot enforce its preference.
+- Deep sleep resets all volatile state (power mode, ephemeral display) — only NVS-backed config survives.
+- Light sleep on ESP32-C3 with BLE requires careful clock config; `CONFIG_PM_ENABLE=y` added to sdkconfig.defaults — a full clean rebuild is required after this change.
+
 ## DD-014 Phase-by-Phase Human Checkpoints with Approval Gate
 
 Decision: Every phase ends with a structured report (code changes, build result, Unity result, manual TC result, doc updates, known issues), then waits for the user's go-ahead. Edits to existing source files require explicit user approval before the change is made; new files (tests, new modules, new docs) may be added freely.

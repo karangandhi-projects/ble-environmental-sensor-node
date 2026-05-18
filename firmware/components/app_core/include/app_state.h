@@ -24,6 +24,12 @@ typedef enum {
     APP_ERROR_BLE = 5,
 } app_error_t;
 
+typedef enum {
+    POWER_MODE_ACTIVE      = 0,
+    POWER_MODE_LIGHT_SLEEP = 1,
+    POWER_MODE_DEEP_SLEEP  = 2,
+} app_power_mode_t;
+
 typedef struct {
     app_runtime_state_t runtime_state;
     app_error_t last_error;
@@ -34,6 +40,10 @@ typedef struct {
     bool sensor_valid;
     uint16_t telemetry_sequence;
     uint16_t report_interval_ms;
+    app_power_mode_t power_mode;
+    bool deep_sleep_pending;
+    bool display_on;
+    bool force_sample;
 } app_state_t;
 
 void app_state_init(uint16_t report_interval_ms);
@@ -48,3 +58,12 @@ void app_state_set_sensor_valid(bool valid);
 void app_state_set_error(app_error_t error);
 uint16_t app_state_next_sequence(void);
 esp_err_t app_state_set_report_interval(uint16_t interval_ms);
+void             app_state_set_power_mode(app_power_mode_t mode);
+app_power_mode_t app_state_get_power_mode(void);
+void             app_state_request_deep_sleep(void);
+void             app_state_clear_deep_sleep_pending(void);
+bool             app_state_get_deep_sleep_pending(void);
+void             app_state_set_display_on(bool on);
+bool             app_state_get_display_on(void);
+void             app_state_set_force_sample(void);
+bool             app_state_get_and_clear_force_sample(void);
