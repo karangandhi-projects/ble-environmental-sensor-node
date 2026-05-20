@@ -128,6 +128,44 @@ Tools:
 - Nordic nRF Sniffer + Wireshark.
 - Ellisys/Frontline if available professionally.
 
+### Pairing / Bonding Fails or Crashes
+
+#### Symptom: bonding never completes — no SM PDUs visible, Android shows "Incorrect PIN" immediately
+
+**Root cause: `ble_store_config_init()` not called.**
+
+`ble_store_config_init()` wires `store_read_cb`, `store_write_cb`, and `store_delete_cb` into `ble_hs_cfg`. Without it, `store_write_cb` is NULL and NimBLE silently aborts bonding the moment it tries to save the LTK — before any SM PDU is exchanged. `CONFIG_BT_NIMBLE_NVS_PERSIST=y` in sdkconfig is not enough on its own.
+
+Fix:
+```c
+nimble_port_init();
+ble_store_config_init();   // must follow nimble_port_init()
+// ... rest of SM config
+```
+Add forward declaration in your source file (not in the public header):
+```c
+void ble_store_config_init(void);
+```
+
+#### Symptom: crash — "stack overflow in task nimble_host" during pairing
+
+**Root cause: `CONFIG_BT_NIMBLE_HOST_TASK_STACK_SIZE` too small for SC ECC.**
+
+SC (Secure Connections) pairing performs ECDH elliptic-curve point-multiplication inside the `nimble_host` FreeRTOS task. The default stack of 4096 bytes is insufficient; the task overflows mid-pairing.
+
+Fix: in `firmware/sdkconfig`:
+```
+CONFIG_BT_NIMBLE_HOST_TASK_STACK_SIZE=8192
+```
+
+#### Symptom: bond lost after hard reset
+
+**Root cause: BLE address regenerated on each boot.**
+
+If using a randomly generated address (`ble_hs_id_gen_rnd()`), the address changes on every reset. Android's stored bond is keyed to the old address — the device looks like a stranger.
+
+Fix: use a fixed static random address set via `ble_hs_id_set_rnd()` in the `sync_cb`.
+
 ## Debug Rule
 
 Never change five things at once. Change one layer, test, log, then proceed.

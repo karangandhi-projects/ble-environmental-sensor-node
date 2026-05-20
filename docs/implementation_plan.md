@@ -200,7 +200,7 @@ Docs updated:
 - docs/design_decisions.md (DD-015).
 - docs/gatt_profile.md (opcodes and Config flags).
 
-## Phase 8 — Security
+## Phase 8 — Security ✓ DONE (2026-05-20)
 
 Goal: Introduce pairing/bonding.
 
@@ -209,19 +209,26 @@ Tasks:
 - Require encryption for Control writes and Config reads+writes. ✓
 - Persist bond keys in NVS (`CONFIG_BT_NIMBLE_NVS_PERSIST=y`). ✓
 - Handle repeat-pairing and encryption-change GAP events. ✓
-- Test reconnect after bonding.
+- Test reconnect after bonding. ✓
 
 Exit criteria:
-- [DONE] `idf.py build` green (0x92240 bytes, 43% flash).
-- Control/Config writes rejected without encryption (ATT 0x05). [hardware pending]
-- Just Works pairing completes in nRF Connect. [hardware pending]
-- Bonded reconnect restores encryption without re-pairing. [hardware pending]
-- Re-pairing after bond delete works. [hardware pending]
+- [DONE] `idf.py build` green (0x97f20 bytes, 41% flash).
+- [DONE] Control/Config writes rejected without encryption (ATT 0x05) — ATT error triggers Just Works pairing flow.
+- [DONE] Just Works pairing completes in nRF Connect — SC, no MITM, no passkey.
+- [DONE] Bonded reconnect restores encryption without re-pairing.
+- [DONE] Re-pairing after bond delete works (BLE_GAP_EVENT_REPEAT_PAIRING handler confirmed).
 
-Docs to update:
+Root causes found (after 18+ attempts) and fixed:
+1. `ble_store_config_init()` was never called → `store_write_cb` NULL → bonding aborted at key-save step.
+2. `CONFIG_BT_NIMBLE_HOST_TASK_STACK_SIZE` was 4096 → SC ECC point-multiplication overflowed stack mid-pairing. Increased to 8192.
+
+Docs updated:
 - docs/security_model.md — final pairing/bonding posture documented. ✓
 - docs/gatt_profile.md — security requirements per characteristic added. ✓
 - docs/test_plan.md — TC-SEC-01..TC-SEC-04 added. ✓
+- docs/phase8_pairing_debug.md — full attempt log + root cause resolution. ✓
+- tests/manual_test_matrix.md — TC-SEC-01..TC-SEC-03 rows marked Pass. ✓
+- docs/debug_guide.md — BLE pairing section added. ✓
 
 ## Phase 9 — Real Sensor Adapter
 

@@ -12,6 +12,8 @@
 #include "host/ble_gap.h"
 #include "host/ble_sm.h"
 #include "host/ble_store.h"
+
+void ble_store_config_init(void);
 #include "services/gap/ble_svc_gap.h"
 #include "services/gatt/ble_svc_gatt.h"
 #include "nimble/nimble_port.h"
@@ -194,23 +196,13 @@ static int gap_event_cb(struct ble_gap_event *event, void *arg)
                 s_conn_handle = event->connect.conn_handle;
                 app_state_set_connected(true);
                 ESP_LOGI(TAG, "Connected");
-                /* Request preferred connection interval (central may accept or negotiate). */
-                struct ble_gap_upd_params upd = {
-                    .itvl_min            = BLE_ENV_CONN_ITVL_MIN_UNITS,
-                    .itvl_max            = BLE_ENV_CONN_ITVL_MAX_UNITS,
-                    .latency             = BLE_ENV_CONN_LATENCY,
-                    .supervision_timeout = BLE_ENV_CONN_SUPERVISION_UNITS,
-                    .min_ce_len          = BLE_GAP_INITIAL_CONN_MIN_CE_LEN,
-                    .max_ce_len          = BLE_GAP_INITIAL_CONN_MAX_CE_LEN,
-                };
-                ble_gap_update_params(s_conn_handle, &upd);
             } else {
                 ESP_LOGW(TAG, "Connect failed; restarting advertising");
                 advertise();
             }
             break;
         case BLE_GAP_EVENT_DISCONNECT:
-            ESP_LOGI(TAG, "Disconnected");
+            ESP_LOGI(TAG, "Disconnected (reason=0x%02x)", event->disconnect.reason);
             s_conn_handle = BLE_HS_CONN_HANDLE_NONE;
             app_state_set_connected(false);
             if (app_state_get_deep_sleep_pending()) {
@@ -238,6 +230,25 @@ static int gap_event_cb(struct ble_gap_event *event, void *arg)
                          event->enc_change.conn_handle, event->enc_change.status);
             }
             return 0;
+        case BLE_GAP_EVENT_PASSKEY_ACTION: {
+            struct ble_sm_io pkey = {0};
+            if (event->passkey.params.action == BLE_SM_IOACT_NUMCMP) {
+                /* SC Numeric Comparison: peripheral auto-accepts; Android shows the same
+                 * 6-digit code and the user taps Yes to confirm. */
+                ESP_LOGI(TAG, "Numeric Comparison: %06lu — tap Yes on phone if it matches",
+                         (unsigned long)event->passkey.params.numcmp);
+                pkey.action = BLE_SM_IOACT_NUMCMP;
+                pkey.numcmp_accept = 1;
+                ble_sm_inject_io(event->passkey.conn_handle, &pkey);
+            } else if (event->passkey.params.action == BLE_SM_IOACT_DISP) {
+                pkey.action  = BLE_SM_IOACT_DISP;
+                pkey.passkey = 123456;
+                ESP_LOGI(TAG, "Pairing passkey: %06lu — enter this in nRF Connect",
+                         (unsigned long)pkey.passkey);
+                ble_sm_inject_io(event->passkey.conn_handle, &pkey);
+            }
+            return 0;
+        }
         case BLE_GAP_EVENT_REPEAT_PAIRING: {
             struct ble_gap_conn_desc desc;
             ble_gap_conn_find(event->repeat_pairing.conn_handle, &desc);
@@ -245,6 +256,7 @@ static int gap_event_cb(struct ble_gap_event *event, void *arg)
             return BLE_GAP_REPEAT_PAIRING_RETRY;
         }
         default:
+            ESP_LOGI(TAG, "GAP event %d (unhandled)", event->type);
             break;
     }
     return 0;
@@ -282,7 +294,7 @@ static void advertise(void)
     params.disc_mode = BLE_GAP_DISC_MODE_GEN;
     params.itvl_min  = BLE_ENV_ADV_ITVL_UNITS;
     params.itvl_max  = BLE_ENV_ADV_ITVL_UNITS;
-    rc = ble_gap_adv_start(BLE_OWN_ADDR_PUBLIC, NULL, BLE_HS_FOREVER, &params, gap_event_cb, NULL);
+    rc = ble_gap_adv_start(BLE_OWN_ADDR_RANDOM, NULL, BLE_HS_FOREVER, &params, gap_event_cb, NULL);
     if (rc == 0) {
         app_state_set_runtime(APP_STATE_ADVERTISING);
         ESP_LOGI(TAG, "Advertising started as %s", BLE_ENV_DEVICE_NAME);
@@ -294,6 +306,11 @@ static void advertise(void)
 
 static void on_sync(void)
 {
+    /* Random static address (bits 7:6 of byte[5] = 0b11 per BT spec).
+     * Using a fixed value avoids stale-LTK rejections from Android during
+     * development — Android has never seen this address and pairs fresh. */
+    static const uint8_t rnd_addr[6] = {0xDE, 0xAD, 0xBE, 0xEF, 0x01, 0xC2};
+    ble_hs_id_set_rnd(rnd_addr);
     advertise();
 }
 
@@ -325,21 +342,27 @@ esp_err_t ble_env_service_init(void)
     };
     esp_timer_create(&ta, &s_deep_sleep_timer);
 
-    ble_hs_cfg.sm_io_cap         = BLE_HS_IO_NO_INPUT_OUTPUT;
-    ble_hs_cfg.sm_bonding        = 1;
-    ble_hs_cfg.sm_mitm           = 0;
-    ble_hs_cfg.sm_sc             = 1;
-    ble_hs_cfg.sm_our_key_dist   = BLE_SM_PAIR_KEY_DIST_ENC | BLE_SM_PAIR_KEY_DIST_ID;
-    ble_hs_cfg.sm_their_key_dist = BLE_SM_PAIR_KEY_DIST_ENC | BLE_SM_PAIR_KEY_DIST_ID;
-    ble_hs_cfg.store_status_cb   = ble_store_util_status_rr;
-
     nimble_port_init();
+    ble_store_config_init();
+    /* nimble_port_init() resets the "NimBLE" ESP log tag to INFO; force it back
+     * to DEBUG so SM-level PDU traces are visible in the monitor output. */
+    esp_log_level_set("NimBLE", ESP_LOG_DEBUG);
     ble_svc_gap_init();
     ble_svc_gatt_init();
     ble_svc_gap_device_name_set(BLE_ENV_DEVICE_NAME);
     ble_gatts_count_cfg(gatt_svcs);
     ble_gatts_add_svcs(gatt_svcs);
-    ble_hs_cfg.sync_cb = on_sync;
+
+    /* Must be set AFTER nimble_port_init(), which resets ble_hs_cfg to defaults. */
+    ble_hs_cfg.sm_io_cap         = BLE_HS_IO_NO_INPUT_OUTPUT;
+    ble_hs_cfg.sm_bonding        = 1;
+    ble_hs_cfg.sm_mitm           = 0;
+    ble_hs_cfg.sm_sc             = 1;   /* Android 16 AuthReq always has SC=1; Legacy path fails immediately */
+    ble_hs_cfg.sm_our_key_dist   = BLE_SM_PAIR_KEY_DIST_ENC;
+    ble_hs_cfg.sm_their_key_dist = BLE_SM_PAIR_KEY_DIST_ENC;
+    ble_hs_cfg.store_status_cb   = ble_store_util_status_rr;
+    ble_hs_cfg.sync_cb           = on_sync;
+
     nimble_port_freertos_init(nimble_host_task);
     return ESP_OK;
 }
