@@ -1,3 +1,14 @@
+/**
+ * @file test_sensor_override.c
+ * @brief Unity on-target tests for the BLE sensor override feature (Phase 9A).
+ *
+ * Verifies that sensor_provider_set_override() / clear_override() behave
+ * correctly. Assertions use WITHIN tolerances (±200 in 0.01°C/% units,
+ * ±400 Pa) to accommodate the time-based ±2°C/±2%/±2hPa drift added in
+ * DD-017. Exact equality assertions would fail due to that drift.
+ *
+ * Run via: cd firmware/test_app && idf.py flash monitor
+ */
 #include "unity.h"
 #include "sensor_provider.h"
 

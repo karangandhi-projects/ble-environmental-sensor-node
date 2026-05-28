@@ -1,3 +1,11 @@
+/**
+ * Scan screen — device discovery and connection entry point.
+ *
+ * Shows a Scan button, a scanning progress indicator, and a lazy list of
+ * discovered BLE_ENV_NODE devices. Tapping a device calls [BleViewModel.connect].
+ * A [LaunchedEffect] monitors [BleViewModel.deviceState] and navigates to the
+ * Dashboard screen automatically when the state becomes [DeviceState.Connected].
+ */
 package com.bleenvnode.ui
 
 import android.bluetooth.BluetoothDevice

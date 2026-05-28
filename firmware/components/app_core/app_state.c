@@ -1,3 +1,15 @@
+/**
+ * @file app_state.c
+ * @brief Thread-safe global application state implementation.
+ *
+ * Uses a FreeRTOS spinlock (portMUX_TYPE) to protect the single s_state
+ * struct. All setters enter/exit the critical section atomically so that
+ * app_state_get_snapshot() always sees a consistent view.
+ *
+ * A spinlock rather than a mutex is used because most state mutations are
+ * very short (single field write) and occur from both task and ISR/callback
+ * contexts. The spinlock avoids the overhead and blocking semantics of a mutex.
+ */
 #include "app_state.h"
 #include "app_config.h"
 #include "freertos/FreeRTOS.h"

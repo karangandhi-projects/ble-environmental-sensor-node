@@ -1,6 +1,12 @@
-/*
- * Unity tests for the simulated sensor provider.
- * Range bounds are loose because esp_timer-driven simulation values drift over time.
+/**
+ * @file test_sensor_provider.c
+ * @brief Unity on-target tests for the env_sensor component (simulated mode).
+ *
+ * Verifies that sensor_provider_init() succeeds and that sensor_provider_read()
+ * returns a valid simulated sample within expected bounds. Range assertions are
+ * intentionally loose because the simulated values drift with esp_timer_get_time().
+ *
+ * Run via: cd firmware/test_app && idf.py flash monitor
  */
 #include "unity.h"
 #include "sensor_provider.h"

@@ -1,3 +1,24 @@
+/**
+ * Raw BLE operations for BLE_ENV_NODE.
+ *
+ * This class owns the Android BLE lifecycle: scan → connect → service discovery →
+ * CCCD subscription → characteristic operations → disconnect. It exposes results
+ * as [kotlinx.coroutines.flow.StateFlow]s that the [BleViewModel] exposes to the UI.
+ *
+ * ## CCCD write queue
+ * Android's BLE stack allows only ONE GATT operation in flight at a time. Writing
+ * multiple CCCD descriptors simultaneously silently drops all but the first.
+ * [BleRepository] solves this with an [ArrayDeque] queue: [drainCccdQueue] writes
+ * one CCCD at a time, and [BluetoothGattCallback.onDescriptorWrite] triggers the
+ * next write. See [android_ble_guide.md] for a detailed explanation.
+ *
+ * ## Security
+ * The firmware uses Just Works BLE pairing (BLE_HS_IO_NO_INPUT_OUTPUT). Writes to
+ * b7e00003/b7e00004/b7e00006 on an unencrypted link return ATT error 0x05, which
+ * triggers Android to initiate pairing automatically.
+ *
+ * @see BleViewModel for the MVVM bridge between this class and the Compose UI.
+ */
 package com.bleenvnode
 
 import android.annotation.SuppressLint

@@ -1,4 +1,20 @@
-"""Quick inference smoke-test against known class vectors."""
+"""
+Smoke-test the float32 TFLite model against five known class vectors.
+
+Tests one representative input per class that should be clearly inside the
+class region (not near a boundary). All five must classify correctly with
+confidence ≥ 0.90 for the model to pass.
+
+This test catches regressions in the training pipeline (e.g. if CLASS_ORDER
+was accidentally reordered, all class indices would be wrong).
+
+Usage:
+    source .venv/bin/activate
+    python3 verify_model.py
+
+Prerequisites:
+    models/model.tflite must exist (run train_classifier.py first).
+"""
 import numpy as np
 import tensorflow as tf
 

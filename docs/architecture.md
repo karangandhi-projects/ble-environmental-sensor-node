@@ -173,6 +173,104 @@ To port to another platform:
 - Replace GPIO/I2C implementation (and the SSD1306 register-write sequence behind the `display` component's public API).
 - Keep GATT profile, app state semantics, and `display.h`/`sensor_provider.h`/`storage_config.h` interfaces unchanged.
 
+## Phase 9 Extensions (2026-05-28)
+
+### System Context — Updated
+
+```text
++-------------------+        BLE         +-------------------------+        I2C        +-------------------+
+| Android App       | <----------------> | ESP32-C3 BLE_ENV_NODE  | <---------------> | SSD1306 0.42" OLED|
+| BleEnvNode.apk    |   GATT v2 profile  | GATT Server/Peripheral |   SDA=GPIO5       | 72x40, addr 0x3C  |
+| (Kotlin/Compose)  |   6 characteristics|                        |   SCL=GPIO6       +-------------------+
++-------------------+                    +-------------------------+
+        |
+        | CSV export
+        v
++-------------------+
+| ML Training       |
+| ml/train_         |
+| classifier.py     |
++-------------------+
+```
+
+### Component Map — Updated
+
+`firmware/components/` now contains a fifth component:
+
+```text
+firmware/components/
+├── app_core/          (state, storage, app_config.h)
+├── ble_env/           (NimBLE GATT service — GATT v2: 6 characteristics)
+├── env_sensor/        (sensor provider — override + ±2°C drift)
+├── display/           (SSD1306 driver + page rotator)
+└── tinyml_inference/  (pure-C MLP classifier + anomaly detection)  ← NEW Phase 9C
+    ├── include/
+    │   ├── tinyml_inference.h    (public API: ml_class_t, ml_result_t, tinyml_infer)
+    │   └── ml_weights.h          (245 floats: W1/b1/W2/b2/W3/b3, embedded at compile time)
+    └── tinyml_inference.c        (dense + ReLU + softmax + anomaly threshold)
+```
+
+Android companion app added at repository root:
+
+```text
+android/BleEnvNode/
+├── app/src/main/java/com/bleenvnode/
+│   ├── BleRepository.kt     (raw BLE: scan, connect, GATT ops, CCCD write queue)
+│   ├── BleViewModel.kt      (MVVM bridge: StateFlow exposures, command functions)
+│   ├── GattUuids.kt         (UUID constants for all 7 GATT objects)
+│   ├── MainActivity.kt      (NavHost, Scaffold, bottom NavigationBar)
+│   ├── model/               (TelemetryData, StatusData, DeviceState)
+│   ├── ui/                  (5 Compose screens: Dashboard, Sensor, Controls, Config, Data)
+│   └── util/CsvExporter.kt  (labeled telemetry → Downloads CSV)
+└── ml/                      (Python training pipeline)
+    ├── collect_synthetic.py  (1500 samples across 5 classes)
+    ├── train_classifier.py   (3→16→8→5 MLP, 99.7% accuracy)
+    ├── quantize.py           (int8 quantization + model_data.cc generation)
+    └── verify_model.py       (smoke-test 5 known vectors)
+```
+
+### TinyML Inference Pipeline
+
+```text
+sensor_provider_read()
+        |
+        v (every report_interval_ms, default 2s)
+tinyml_infer(temp_c, humidity_pct, pressure_hpa)
+        |
+        +-- normalize inputs to [0,1]
+        |   temp: (x + 10) / 70
+        |   hum:  x / 100
+        |   press: (x - 900) / 200
+        |
+        +-- forward pass: Dense(16,ReLU) → Dense(8,ReLU) → Dense(5,softmax)
+        |
+        +-- if max_confidence < 50% → ML_CLASS_ANOMALY
+        |
+        v
+ml_result_t { class_id, confidence }
+        |
+        v (only on class change)
+ble_env_service_notify_ml_alert() → b7e00007 BLE notification → Android DataAlertsScreen
+```
+
+### Sensor Override Data Flow
+
+```text
+Android SensorScreen slider
+        |
+        v vm.sendSensorOverride(tempC, humPct, pressHpa)
+BleRepository.sendSensorOverride() → 6-byte LE write to b7e00006 (encrypted)
+        |
+        v gatt_access_cb in ble_env_service.c
+sensor_provider_set_override(temp_cdeg, humidity_cpct, pressure_hpa_x10)
+        |
+        v sensor_provider_read() on next telemetry cycle
+returns override value + time-based ±2°C / ±2% / ±2hPa drift
+        |
+        v ble_env_service_notify_telemetry()
+b7e00002 BLE notification → Android Dashboard live update
+```
+
 ## Build Workflow
 
 This project is structured for both human developers and agentic execution. The work is split into phases (`docs/implementation_plan.md`) with explicit exit criteria; each phase ends with a structured report and a human checkpoint. Multi-agent orchestration is used to parallelize code-generation-bound work (test scaffolding, encoder TDD, display sub-modules) while hardware-bound steps (flashing, manual BLE/OLED verification) stay single-threaded.

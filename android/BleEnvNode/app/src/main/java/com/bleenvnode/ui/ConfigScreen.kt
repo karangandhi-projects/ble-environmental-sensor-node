@@ -1,3 +1,14 @@
+/**
+ * Configuration screen — read and write the device's Configuration characteristic (b7e00004).
+ *
+ * Shows two toggles (Notifications on by default, Display off on boot) and a slider
+ * for the reporting interval (500ms–60s). The current config is read from the device
+ * on connect and populates the controls via [LaunchedEffect] when [BleViewModel.configData]
+ * updates. Tapping Save Configuration writes the 4-byte config payload to b7e00004
+ * (encrypted write required).
+ *
+ * The firmware persists the config in NVS — it survives device reboot.
+ */
 package com.bleenvnode.ui
 
 import androidx.compose.foundation.layout.*

@@ -1,3 +1,15 @@
+/**
+ * Sensor Override screen — inject simulated sensor values via BLE.
+ *
+ * Three sliders (temperature -10–60°C, humidity 0–100%, pressure 900–1100 hPa)
+ * write to the Sensor Override characteristic (b7e00006) when the user releases
+ * a slider. Slider state is stored in [BleViewModel] so it persists across tab
+ * navigation. "Clear Override" resets sliders and writes all-zeros to b7e00006,
+ * resuming the firmware's time-drifting simulated values.
+ *
+ * The current readings from the firmware (with ±2°C drift applied) are shown
+ * above the sliders so the user can see the effect of the override in real time.
+ */
 package com.bleenvnode.ui
 
 import androidx.compose.foundation.layout.*

@@ -159,6 +159,60 @@ Tradeoff:
 - Deep sleep resets all volatile state (power mode, ephemeral display) — only NVS-backed config survives.
 - Light sleep on ESP32-C3 with BLE requires careful clock config; `CONFIG_PM_ENABLE=y` added to sdkconfig.defaults — a full clean rebuild is required after this change.
 
+## DD-016 GATT v2 — User Description Descriptors on All Characteristics
+
+Decision: Add a Characteristic User Description descriptor (UUID 0x2901) to all six characteristics in the GATT service, exposing human-readable names ("Telemetry", "Control", "Configuration", "Status", "Sensor Override", "ML Alert").
+
+Reason:
+- nRF Connect displays these names instead of "Unknown Characteristic", making manual testing and debugging dramatically faster.
+- Android's `BluetoothGattDescriptor` can read 0x2901 at service discovery time, enabling programmatic labeling without UUID lookup tables.
+- Zero runtime cost — the strings are in flash, the `gatt_user_desc_cb` callback fires only on explicit descriptor reads.
+
+Implementation: `gatt_user_desc_cb()` in `ble_env_service.c` uses `os_mbuf_append()` to serve the `(const char *)arg` string passed as the descriptor's `arg` field in the GATT table.
+
+Tradeoff:
+- NimBLE's struct is `ble_gatt_dsc_def` (not `ble_gatt_dscr_def` as some examples show) — discovered at build time.
+
+## DD-017 Sensor Override with ±2°C/±2%/±2hPa Drift
+
+Decision: When the BLE Sensor Override characteristic (b7e00006) is written, `sensor_provider_read()` returns the set values plus a time-based drift of ±2°C, ±2% RH, and ±2 hPa, cycling through the pattern every 5 seconds using `esp_timer_get_time()`.
+
+Reason:
+- Exact override values (no drift) would produce degenerate training data: 30 identical samples at exactly 22.0°C/45.0%/1013 hPa. A model trained on this would likely memorize exact values rather than learning the class region.
+- ±2°C drift creates realistic variation that forces the classifier to learn class boundaries robustly. Real BME280 sensors have ±0.5°C noise; ±2°C is deliberately generous for training coverage.
+- The same drift makes the Dashboard display animate naturally, giving the device a "live sensor" feel during demos.
+
+Tradeoff:
+- Unit tests for exact override values had to be updated to use `TEST_ASSERT_INT16_WITHIN(200, ...)` instead of exact equality.
+
+## DD-018 Pure-C MLP Inference Instead of TFLite Micro
+
+Decision: Implement the TinyML classifier as a plain C forward pass with weights compiled into a header file (`ml_weights.h`), rather than using the TFLite Micro runtime.
+
+Reason:
+- `tensorflow/lite-micro` is not available in the ESP-IDF v5.2.3 component registry (`idf_component_manager add tensorflow/lite-micro` returns "Component not found").
+- The model is architecturally tiny: 3→16→8→5 MLP = 245 weights and biases. Embedded as `static const float` arrays, they occupy ~980 bytes — smaller than TFLite Micro's runtime alone (~100KB).
+- The forward pass is 70 lines of pure C: `dense()`, `relu()`, `softmax()`, `tinyml_infer()`. No C++ toolchain, no external dependencies, no schema version mismatches.
+- Binary footprint increase: +3KB vs Phase 9A baseline (0x98410 → 0x99520).
+
+Tradeoff:
+- Model updates require retraining, re-running `ml/extract_weights.py`, and reflashing. There is no hot-swap mechanism. Acceptable for a portfolio/learning project.
+- The int8 quantized `model_data.cc` (also in the component) is retained for reference if TFLite Micro support is added later.
+
+## DD-019 Anomaly Detection via Classifier Confidence Threshold
+
+Decision: Declare `ML_CLASS_ANOMALY` (class 5) when the classifier's maximum softmax probability is below 0.50, rather than using a separate autoencoder.
+
+Reason:
+- The initial autoencoder approach (3→8→3, trained on comfortable-only data) was conceptually wrong for this use case: an autoencoder trained on one class flags ALL other classes as anomalies, including well-known labeled classes like "danger". At 55°C/10%/980 hPa, the device returned "anomaly" instead of "danger".
+- The confidence threshold approach is correct by construction: if the classifier is genuinely uncertain between two classes (e.g., 26°C temperature between comfortable and warm), max softmax < 0.5. If a known class matches strongly (e.g., danger), max softmax → 0.99 and anomaly is never triggered.
+- No additional model weights needed — the existing 245-weight classifier handles anomaly detection as a side effect of its uncertainty.
+
+Implementation: In `tinyml_infer()`, after softmax, if `out[best] < 0.50f` → return `ML_CLASS_ANOMALY` with confidence = `(1 - out[best]) × 100`.
+
+Tradeoff:
+- Cannot detect anomalies that happen to land inside a trained class region (e.g., a sensor fault that reads a plausible but wrong temperature). A real production system would need additional monitoring.
+
 ## DD-014 Phase-by-Phase Human Checkpoints with Approval Gate
 
 Decision: Every phase ends with a structured report (code changes, build result, Unity result, manual TC result, doc updates, known issues), then waits for the user's go-ahead. Edits to existing source files require explicit user approval before the change is made; new files (tests, new modules, new docs) may be added freely.

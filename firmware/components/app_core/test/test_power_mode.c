@@ -1,3 +1,11 @@
+/**
+ * @file test_power_mode.c
+ * @brief Unity on-target tests for power-mode state in app_core::app_state.
+ *
+ * Verifies that power mode transitions (active / light sleep / deep sleep
+ * pending) are tracked correctly by app_state, and that the deep_sleep_pending
+ * flag is set and cleared properly. Run via: cd firmware/test_app && idf.py flash monitor
+ */
 #include "unity.h"
 #include "app_state.h"
 #include "app_config.h"

@@ -88,6 +88,51 @@ Acceptance:
 - A `SIM` indicator is visible on the temperature and humidity pages while the telemetry's simulated-data flag (`BLE_ENV_FLAG_SIMULATED_DATA`) is set.
 - The 72×40 visible region inside the 128×64 controller frame is honoured (X-offset 28).
 
+### FR-012 Sensor Override — Phase 9A
+
+The device shall expose a writable Sensor Override characteristic (b7e00006) over an encrypted link.
+
+Acceptance:
+- A bonded central can write a 6-byte little-endian payload: int16 temperature (°C×100), uint16 humidity (%×100), uint16 pressure (hPa×10).
+- Subsequent telemetry notifications reflect the override values with ±2°C/±2%/±2hPa drift.
+- Writing all-zeros clears the override and restores the simulated time-based readings.
+- Writes without encryption are rejected with ATT error 0x05.
+
+### FR-013 ML Alert Notification — Phase 9C
+
+The device shall notify the ML Alert characteristic (b7e00007) when the inferred environmental class changes.
+
+Acceptance:
+- On each telemetry cycle, the device runs a 3→16→8→5 MLP classifier on the current sensor reading.
+- A BLE notification is sent only when the class changes (not every cycle).
+- The 2-byte payload: byte 0 = class ID (0=comfortable, 1=warm, 2=cold, 3=humid, 4=danger, 5=anomaly), byte 1 = confidence (0–100).
+- When max softmax probability < 50%, the device returns ML_CLASS_ANOMALY (5) instead of a class.
+- Subscription requires no encryption.
+
+### FR-014 Android Companion App — Phase 9B
+
+A Kotlin/Jetpack Compose Android app shall connect to BLE_ENV_NODE and provide full device control.
+
+Acceptance:
+- App scans for BLE_ENV_NODE, lists results, and connects on tap.
+- Just Works BLE pairing completes automatically on first connect.
+- Dashboard tab shows live telemetry (temperature, humidity, pressure, uptime, sequence) and status (LED, last error, bond state).
+- Sensor tab provides sliders for temperature (−10–60°C), humidity (0–100%), pressure (900–1100 hPa) that write to b7e00006.
+- Slider values persist across tab navigation within the session.
+- Controls tab sends LED, display, and power mode commands.
+- Config tab reads current configuration and writes new report interval and boot flags.
+- Data tab shows ML Alert subscription status, current class+confidence, session label chips, telemetry history (last 50 displayed), and CSV export.
+- CSV export writes labeled telemetry to Android Downloads folder (MediaStore API on Android 10+).
+
+### FR-015 Anomaly Detection — Phase 9C
+
+The device shall classify inputs that do not match any trained class as anomalous.
+
+Acceptance:
+- Inputs with max softmax confidence < 50% return ML_CLASS_ANOMALY (5).
+- Values clearly in a trained class region (e.g., 55°C / 10% / 980 hPa → danger) return the correct class, not anomaly.
+- Values at class boundaries (e.g., 26°C / 65% humidity between comfortable and warm regions) return anomaly.
+
 ## Non-Functional Requirements
 
 ### NFR-001 Clarity

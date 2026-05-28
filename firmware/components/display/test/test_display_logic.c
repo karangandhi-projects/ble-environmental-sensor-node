@@ -1,5 +1,6 @@
-/*
- * Unity tests for the display component's pure-logic helpers.
+/**
+ * @file test_display_logic.c
+ * @brief Unity on-target tests for the display component's pure-logic helpers.
  *
  * Only display_page_for_time, display_state_label, display_format_temperature,
  * display_format_humidity, and display_should_show_sim_badge are exercised here.

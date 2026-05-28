@@ -1,3 +1,15 @@
+/**
+ * @file ssd1306.c
+ * @brief SSD1306 OLED driver — I2C init, framebuffer, and flush.
+ *
+ * Maintains a static 5×128-byte framebuffer (640 bytes in RAM). Pixel writes
+ * are local operations; only ssd1306_flush() sends data over I2C. The
+ * 128-wide framebuffer covers the full controller address space; the visible
+ * 72-column window starts at column 28 (SSD1306_X_OFFSET) applied during flush.
+ *
+ * @note The I2C driver is initialised on I2C_NUM_0 by ssd1306_init(). No
+ *       other component should access I2C_NUM_0 directly after this point.
+ */
 #include "ssd1306.h"
 #include "driver/i2c.h"
 #include "app_config.h"

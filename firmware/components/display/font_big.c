@@ -1,3 +1,16 @@
+/**
+ * @file font_big.c
+ * @brief 6×8 monospace bitmap font data (ASCII 0x20–0x7E).
+ *
+ * This file contains only the font_big_data[] array — 95 glyphs × 6 bytes
+ * = 570 bytes of read-only flash. The format is described in font_big.h.
+ *
+ * At scale=2 (used by the display module), each glyph renders as 12×16 pixels,
+ * allowing two lines of text in the 72×40 visible area.
+ *
+ * @note Do not edit this array manually. It is derived from the Adafruit GFX
+ *       5×7 font with a 0x00 spacing column appended to each glyph.
+ */
 #include "font_big.h"
 
 /*

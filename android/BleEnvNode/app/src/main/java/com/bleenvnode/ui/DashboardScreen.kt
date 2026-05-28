@@ -1,3 +1,14 @@
+/**
+ * Dashboard screen — live telemetry and device status display.
+ *
+ * Shows two cards: TELEMETRY (temperature, humidity, pressure, uptime, sequence,
+ * SIM/LOW BATT chips) and STATUS (last error, LED state). A connection chip in
+ * the header shows bonded+encrypted status. Disconnect and Forget Device buttons
+ * are provided at the bottom.
+ *
+ * All values are collected from [BleViewModel] StateFlows and recompose
+ * automatically when the firmware sends a new notification.
+ */
 package com.bleenvnode.ui
 
 import androidx.compose.foundation.layout.*

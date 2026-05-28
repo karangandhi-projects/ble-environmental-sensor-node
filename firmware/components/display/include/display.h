@@ -1,3 +1,27 @@
+/**
+ * @file display.h
+ * @brief SSD1306 OLED page-rotator and render interface.
+ *
+ * Manages the three-page rotating display for BLE_ENV_NODE:
+ * - Page 0 (3000 ms): BLE runtime state label (BOOT/ADV/CONN/NOTIFY)
+ * - Page 1 (1500 ms): Latest temperature in large font
+ * - Page 2 (1500 ms): Latest humidity in large font
+ *
+ * A `SIM` badge is drawn on pages 1 and 2 when the telemetry's simulated-data
+ * flag (BLE_ENV_FLAG_SIMULATED_DATA) is set. Phase 9 real-sensor swap clears
+ * this flag automatically — no display code change required.
+ *
+ * @par Internal timer
+ * display_init() creates a FreeRTOS timer that fires every 50 ms and calls
+ * display_tick(). The tick advances the page schedule and re-renders if the
+ * active page changed. I2C flush (ssd1306_flush) runs only on page change,
+ * not every tick.
+ *
+ * @par Thread safety
+ * display_set_state() and display_set_telemetry() are protected by a
+ * portMUX spinlock. display_tick() runs in the timer callback context
+ * (not a task), so it must not block.
+ */
 #pragma once
 #include <stdint.h>
 #include <stdbool.h>

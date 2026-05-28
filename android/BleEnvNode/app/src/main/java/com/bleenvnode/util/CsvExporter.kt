@@ -1,3 +1,17 @@
+/**
+ * Exports labeled telemetry history to a CSV file in the Android Downloads folder.
+ *
+ * The CSV format is:
+ * ```
+ * timestamp_ms,temp_c,humidity_pct,pressure_hpa,label
+ * 1779967475351,21.47,46.02,1013.0,comfortable
+ * ```
+ * This format is directly compatible with the Python ML training scripts in ml/.
+ *
+ * Uses [android.provider.MediaStore.Downloads] (Android 10+ / API 29+) to write
+ * to the shared Downloads folder without requiring the legacy WRITE_EXTERNAL_STORAGE
+ * permission. Falls back to direct File I/O on API 28 and below.
+ */
 package com.bleenvnode.util
 
 import android.content.ContentValues

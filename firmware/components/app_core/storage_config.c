@@ -1,3 +1,15 @@
+/**
+ * @file storage_config.c
+ * @brief NVS read/write for the BLE_ENV_NODE configuration blob.
+ *
+ * Stores two values under the "ble_env" NVS namespace:
+ *   "interval_ms" (uint16): telemetry reporting period
+ *   "flags"       (uint8):  config bitmask (display-off flag etc.)
+ *
+ * On first boot or after NVS erase, storage_config_load_or_default() returns
+ * safe defaults without error. The NVS partition is erased and re-initialised
+ * automatically if it is full or corrupted on startup.
+ */
 #include "storage_config.h"
 #include "app_config.h"
 #include "nvs_flash.h"

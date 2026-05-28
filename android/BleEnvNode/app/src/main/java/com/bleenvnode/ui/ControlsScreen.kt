@@ -1,3 +1,15 @@
+/**
+ * Controls screen — send BLE command opcodes to the device.
+ *
+ * Four sections map to Control characteristic (b7e00003) opcode groups:
+ * - LED: Off (0x01) / On (0x02) / Toggle (0x03)
+ * - Display: Off (0x30/0x00) / On (0x30/0x01) / Dim (0x30/0x02)
+ * - Power Mode: Active (0x20/0x00) / Light Sleep (0x20/0x01) / Deep Sleep (0x20/0x02)
+ * - Telemetry: Force Sample Now (0x10)
+ *
+ * Deep Sleep requires a confirmation dialog (shown via [BleViewModel.deepSleepConfirmPending])
+ * because it disconnects BLE and the device reboots after 30 seconds.
+ */
 package com.bleenvnode.ui
 
 import androidx.compose.foundation.layout.*

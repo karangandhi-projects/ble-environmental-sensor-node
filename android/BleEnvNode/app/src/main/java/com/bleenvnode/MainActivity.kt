@@ -1,3 +1,13 @@
+/**
+ * Single Activity entry point for the BleEnvNode Android companion app.
+ *
+ * Hosts the entire app in a single Compose [setContent] block. On create,
+ * requests the required Bluetooth permissions (BLUETOOTH_SCAN + BLUETOOTH_CONNECT
+ * on API 31+, ACCESS_FINE_LOCATION on API 30 and below).
+ *
+ * Navigation is handled by [BleEnvNodeApp] using Jetpack Navigation Compose.
+ * The bottom [NavigationBar] is only visible when the device state is [DeviceState.Connected].
+ */
 package com.bleenvnode
 
 import android.os.Bundle

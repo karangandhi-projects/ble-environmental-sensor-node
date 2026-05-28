@@ -1,5 +1,6 @@
-/*
- * Unity tests for the app_core::app_state module.
+/**
+ * @file test_app_state.c
+ * @brief Unity on-target tests for the app_core::app_state module.
  *
  * Run with the ESP-IDF unit-test-app:
  *   cd $IDF_PATH/tools/unit-test-app

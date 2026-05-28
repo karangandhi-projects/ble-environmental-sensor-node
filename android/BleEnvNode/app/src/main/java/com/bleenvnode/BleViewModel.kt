@@ -1,3 +1,26 @@
+/**
+ * MVVM bridge between [BleRepository] and the Compose UI.
+ *
+ * [BleViewModel] exposes [kotlinx.coroutines.flow.StateFlow]s from the repository
+ * as read-only, and provides command functions (sendLedOn, sendSensorOverride, etc.)
+ * that delegate to the repository. The ViewModel survives Android configuration
+ * changes (screen rotation) because it extends [AndroidViewModel].
+ *
+ * ## Telemetry history
+ * An [init] coroutine running in [viewModelScope] collects every incoming telemetry
+ * sample, stamps it with the current session label, and appends it to a rolling
+ * buffer of 500 entries. This buffer drives the CSV export in DataAlertsScreen.
+ *
+ * ## Slider state persistence
+ * The sensor override slider values ([overrideTempC], [overrideHumPct],
+ * [overridePressHpa]) are stored here rather than as Compose `remember` state,
+ * so they survive tab navigation within the session.
+ *
+ * ## Deep sleep confirmation
+ * Deep sleep is destructive (BLE disconnects, device reboots after 30 s). The ViewModel
+ * requires a two-step confirmation: [requestDeepSleep] sets a pending flag that shows
+ * an AlertDialog, and [confirmDeepSleep] sends the actual opcode.
+ */
 package com.bleenvnode
 
 import android.app.Application

@@ -1,3 +1,37 @@
+/**
+ * @file ble_env_service.c
+ * @brief NimBLE GATT service implementation — advertising, GATT, GAP, security.
+ *
+ * Owns the NimBLE host stack lifecycle, GATT service registration, and all
+ * BLE event handling for BLE_ENV_NODE. Key responsibilities:
+ *
+ * @par GATT table (gatt_svcs[])
+ * Six characteristics registered via ble_gatts_add_svcs(). Each characteristic
+ * carries a 0x2901 User Description descriptor served by gatt_user_desc_cb().
+ * The table is static const so it lives in flash after boot.
+ *
+ * @par gatt_access_cb()
+ * Single callback dispatched for all characteristic reads and writes. Uses
+ * ble_uuid_cmp() to route each access to the correct handler block. Returns
+ * BLE_ATT_ERR_UNLIKELY for any unmatched access (should never happen if the
+ * GATT table is correctly constructed).
+ *
+ * @par gap_event_cb()
+ * Handles CONNECT, DISCONNECT, SUBSCRIBE, ENC_CHANGE, PASSKEY_ACTION, and
+ * REPEAT_PAIRING. Advertising restarts automatically on disconnect unless
+ * deep sleep was requested via opcode 0x20/0x02.
+ *
+ * @par Security
+ * Just Works pairing with SC=1 (Secure Connections). Keys persisted in NVS
+ * via ble_store_config_init(). ble_store_util_delete_peer() handles
+ * re-pairing after a bond is deleted on the central side. See DD-008 and
+ * docs/security_model.md.
+ *
+ * @par Deep sleep coordination
+ * Opcode 0x20/0x02 (deep sleep) sets a 500 ms one-shot timer before
+ * disconnecting, so the ATT write response reaches the central before the
+ * link drops. Actual sleep is triggered from gap_event_cb() on disconnect.
+ */
 #include "ble_env_service.h"
 #include "sensor_provider.h"
 #include <string.h>

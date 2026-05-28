@@ -1,3 +1,21 @@
+/**
+ * @file display.c
+ * @brief Three-page rotating display manager for the SSD1306 OLED.
+ *
+ * Manages a timed page schedule and renders each page to the SSD1306
+ * framebuffer. A FreeRTOS timer fires every 50 ms and calls display_tick()
+ * to advance the page clock and re-render if the active page changed.
+ *
+ * @par Page schedule
+ * - Page 0 (BLE state):   3000 ms — shows BOOT/ADV/CONN/NOTIFY
+ * - Page 1 (temperature): 1500 ms — large font, SIM badge if simulated
+ * - Page 2 (humidity):    1500 ms — large font, SIM badge if simulated
+ *
+ * @par State updates
+ * display_set_state() and display_set_telemetry() are called from the
+ * telemetry_task on every sample cycle. They copy the new values into module
+ * statics under a spinlock; the next display_tick() call picks them up.
+ */
 #include "display.h"
 #include "ssd1306.h"
 #include "font_big.h"

@@ -1,6 +1,9 @@
-/*
- * Unity tests for storage_config. Tests load/save round-trip and validation.
- * Requires NVS partition initialization; init runs in setup.
+/**
+ * @file test_storage_config.c
+ * @brief Unity on-target tests for the app_core::storage_config module.
+ *
+ * Tests load/save round-trip and validation. Requires NVS flash initialisation;
+ * the test setup calls storage_config_init() before each test case.
  */
 #include "unity.h"
 #include "storage_config.h"

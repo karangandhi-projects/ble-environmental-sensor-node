@@ -1,3 +1,18 @@
+/**
+ * Data & Alerts screen — ML alert display, session labeling, telemetry history, and CSV export.
+ *
+ * The ML Alert card is always visible and shows the subscription status ("subscribed" /
+ * "subscribing…") and the most recent class+confidence received from b7e00007. When no
+ * alert has arrived yet, a "Waiting for class change…" placeholder is shown.
+ *
+ * Session label chips (comfortable/warm/cold/humid/danger) set [BleViewModel.currentLabel],
+ * which is stamped onto each incoming telemetry sample in the ViewModel's history buffer.
+ * The Export CSV button calls [CsvExporter.export] to write the labeled history to the
+ * Android Downloads folder via the MediaStore API.
+ *
+ * The last 50 history entries are displayed in a lazy list for visual confirmation
+ * that data is being collected before export.
+ */
 package com.bleenvnode.ui
 
 import androidx.compose.foundation.layout.*

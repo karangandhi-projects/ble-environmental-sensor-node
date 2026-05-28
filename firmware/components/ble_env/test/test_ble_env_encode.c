@@ -1,5 +1,6 @@
-/*
- * Unity tests for the telemetry and status encoders.
+/**
+ * @file test_ble_env_encode.c
+ * @brief Unity on-target tests for the ble_env telemetry and status encoders.
  *
  * IMPORTANT: encode_telemetry and encode_status are currently `static` in
  * ble_env_service.c. These tests will FAIL TO COMPILE until they are exposed
