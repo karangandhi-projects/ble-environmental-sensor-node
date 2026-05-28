@@ -14,12 +14,13 @@ class BleViewModel(app: Application) : AndroidViewModel(app) {
 
     val repo = BleRepository(app.applicationContext)
 
-    val scannedDevices = repo.scannedDevices.asStateFlow()
-    val deviceState    = repo.deviceState.asStateFlow()
-    val telemetry      = repo.telemetry.asStateFlow()
-    val status         = repo.status.asStateFlow()
-    val mlAlert        = repo.mlAlert.asStateFlow()
-    val configData     = repo.configData.asStateFlow()
+    val scannedDevices    = repo.scannedDevices.asStateFlow()
+    val deviceState       = repo.deviceState.asStateFlow()
+    val telemetry         = repo.telemetry.asStateFlow()
+    val status            = repo.status.asStateFlow()
+    val mlAlert           = repo.mlAlert.asStateFlow()
+    val mlAlertSubscribed = repo.mlAlertSubscribed.asStateFlow()
+    val configData        = repo.configData.asStateFlow()
 
     private val _telemetryHistory = MutableStateFlow<List<TelemetryData>>(emptyList())
     val telemetryHistory: StateFlow<List<TelemetryData>> = _telemetryHistory

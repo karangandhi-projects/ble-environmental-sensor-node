@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import java.lang.reflect.Method
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import java.util.ArrayDeque
 
 @SuppressLint("MissingPermission")
 class BleRepository(private val context: Context) {
@@ -24,10 +25,15 @@ class BleRepository(private val context: Context) {
     val telemetry        = MutableStateFlow<TelemetryData?>(null)
     val status           = MutableStateFlow<StatusData?>(null)
     val mlAlert          = MutableStateFlow<Pair<Int,Int>?>(null) // class, confidence
+    val mlAlertSubscribed = MutableStateFlow(false)
     val writeResult      = MutableStateFlow<Boolean?>(null)
-    val configData       = MutableStateFlow<Triple<Boolean, Boolean, Int>?>(null) // notifDefault, displayOffBoot, intervalMs
+    val configData       = MutableStateFlow<Triple<Boolean, Boolean, Int>?>(null)
 
     private val seen = mutableSetOf<String>()
+
+    /* CCCD write queue — Android BLE requires one descriptor write at a time. */
+    private val cccdQueue = ArrayDeque<java.util.UUID>()
+    private var cccdBusy = false
 
     private val scanCallback = object : ScanCallback() {
         override fun onScanResult(callbackType: Int, result: ScanResult) {
@@ -91,6 +97,9 @@ class BleRepository(private val context: Context) {
                 }
                 BluetoothProfile.STATE_DISCONNECTED -> {
                     deviceState.value = DeviceState.Disconnected
+                    mlAlertSubscribed.value = false
+                    cccdQueue.clear()
+                    cccdBusy = false
                     gatt = null
                 }
             }
@@ -100,10 +109,23 @@ class BleRepository(private val context: Context) {
             if (status != BluetoothGatt.GATT_SUCCESS) return
             val bonded = g.device.bondState == BluetoothDevice.BOND_BONDED
             deviceState.value = DeviceState.Connected(bonded = bonded, encrypted = bonded)
-            enableNotification(g, GattUuids.TELEMETRY)
-            enableNotification(g, GattUuids.STATUS)
-            enableNotification(g, GattUuids.ML_ALERT)
-            readConfig(g)
+            /* Queue CCCD writes sequentially — writing all at once drops some on Android. */
+            cccdQueue.clear()
+            cccdBusy = false
+            cccdQueue.add(GattUuids.TELEMETRY)
+            cccdQueue.add(GattUuids.STATUS)
+            cccdQueue.add(GattUuids.ML_ALERT)
+            drainCccdQueue(g)
+        }
+
+        override fun onDescriptorWrite(g: BluetoothGatt, descriptor: BluetoothGattDescriptor, status: Int) {
+            if (descriptor.uuid == GattUuids.CCCD && descriptor.characteristic.uuid == GattUuids.ML_ALERT) {
+                mlAlertSubscribed.value = (status == BluetoothGatt.GATT_SUCCESS)
+            }
+            cccdBusy = false
+            drainCccdQueue(g)
+            /* Once all CCCDs are written, read config. */
+            if (cccdQueue.isEmpty()) readConfig(g)
         }
 
         override fun onCharacteristicChanged(
@@ -134,10 +156,17 @@ class BleRepository(private val context: Context) {
         ) { writeResult.value = status == BluetoothGatt.GATT_SUCCESS }
     }
 
-    private fun enableNotification(g: BluetoothGatt, uuid: java.util.UUID) {
-        val chr = g.getService(GattUuids.SERVICE)?.getCharacteristic(uuid) ?: return
+    private fun drainCccdQueue(g: BluetoothGatt) {
+        if (cccdBusy || cccdQueue.isEmpty()) return
+        val uuid = cccdQueue.poll() ?: return
+        val chr = g.getService(GattUuids.SERVICE)?.getCharacteristic(uuid) ?: run {
+            drainCccdQueue(g); return
+        }
         g.setCharacteristicNotification(chr, true)
-        val cccd = chr.getDescriptor(GattUuids.CCCD) ?: return
+        val cccd = chr.getDescriptor(GattUuids.CCCD) ?: run {
+            drainCccdQueue(g); return
+        }
+        cccdBusy = true
         if (Build.VERSION.SDK_INT >= 33) {
             g.writeDescriptor(cccd, BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE)
         } else {
