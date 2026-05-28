@@ -1,0 +1,249 @@
+package com.bleenvnode
+
+import android.annotation.SuppressLint
+import android.bluetooth.*
+import android.bluetooth.le.*
+import android.content.Context
+import android.os.Build
+import com.bleenvnode.model.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import java.lang.reflect.Method
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
+
+@SuppressLint("MissingPermission")
+class BleRepository(private val context: Context) {
+
+    private val adapter: BluetoothAdapter =
+        (context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager).adapter
+
+    private var gatt: BluetoothGatt? = null
+
+    val scannedDevices   = MutableStateFlow<List<BluetoothDevice>>(emptyList())
+    val deviceState      = MutableStateFlow<DeviceState>(DeviceState.Disconnected)
+    val telemetry        = MutableStateFlow<TelemetryData?>(null)
+    val status           = MutableStateFlow<StatusData?>(null)
+    val mlAlert          = MutableStateFlow<Pair<Int,Int>?>(null) // class, confidence
+    val writeResult      = MutableStateFlow<Boolean?>(null)
+    val configData       = MutableStateFlow<Triple<Boolean, Boolean, Int>?>(null) // notifDefault, displayOffBoot, intervalMs
+
+    private val seen = mutableSetOf<String>()
+
+    private val scanCallback = object : ScanCallback() {
+        override fun onScanResult(callbackType: Int, result: ScanResult) {
+            val device = result.device
+            if (device.name == "BLE_ENV_NODE" && seen.add(device.address)) {
+                scannedDevices.value = scannedDevices.value + device
+            }
+        }
+    }
+
+    fun startScan() {
+        seen.clear()
+        scannedDevices.value = emptyList()
+        deviceState.value = DeviceState.Scanning
+        val filter = ScanFilter.Builder().setDeviceName("BLE_ENV_NODE").build()
+        val settings = ScanSettings.Builder()
+            .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build()
+        adapter.bluetoothLeScanner?.startScan(listOf(filter), settings, scanCallback)
+    }
+
+    fun stopScan() {
+        adapter.bluetoothLeScanner?.stopScan(scanCallback)
+        if (deviceState.value is DeviceState.Scanning)
+            deviceState.value = DeviceState.Disconnected
+    }
+
+    fun connect(device: BluetoothDevice) {
+        stopScan()
+        gatt = device.connectGatt(context, false, gattCallback, BluetoothDevice.TRANSPORT_LE)
+    }
+
+    fun disconnect() {
+        gatt?.disconnect()
+    }
+
+    fun forgetDevice() {
+        gatt?.device?.let { dev ->
+            try {
+                val m: Method = dev.javaClass.getMethod("removeBond")
+                m.invoke(dev)
+            } catch (_: Exception) {}
+        }
+        disconnect()
+    }
+
+    private fun refreshGattCache() {
+        gatt?.let { g ->
+            try {
+                val m: Method = g.javaClass.getMethod("refresh")
+                m.invoke(g)
+            } catch (_: Exception) {}
+        }
+    }
+
+    private val gattCallback = object : BluetoothGattCallback() {
+        override fun onConnectionStateChange(g: BluetoothGatt, status: Int, newState: Int) {
+            when (newState) {
+                BluetoothProfile.STATE_CONNECTED -> {
+                    refreshGattCache()
+                    g.discoverServices()
+                }
+                BluetoothProfile.STATE_DISCONNECTED -> {
+                    deviceState.value = DeviceState.Disconnected
+                    gatt = null
+                }
+            }
+        }
+
+        override fun onServicesDiscovered(g: BluetoothGatt, status: Int) {
+            if (status != BluetoothGatt.GATT_SUCCESS) return
+            val bonded = g.device.bondState == BluetoothDevice.BOND_BONDED
+            deviceState.value = DeviceState.Connected(bonded = bonded, encrypted = bonded)
+            enableNotification(g, GattUuids.TELEMETRY)
+            enableNotification(g, GattUuids.STATUS)
+            enableNotification(g, GattUuids.ML_ALERT)
+            readConfig(g)
+        }
+
+        override fun onCharacteristicChanged(
+            g: BluetoothGatt, chr: BluetoothGattCharacteristic, value: ByteArray
+        ) {
+            when (chr.uuid) {
+                GattUuids.TELEMETRY -> parseTelemetry(value)
+                GattUuids.STATUS    -> parseStatus(value)
+                GattUuids.ML_ALERT  -> if (value.size >= 2)
+                    mlAlert.value = Pair(value[0].toInt() and 0xFF, value[1].toInt() and 0xFF)
+            }
+        }
+
+        @Deprecated("Needed for API < 33")
+        override fun onCharacteristicChanged(g: BluetoothGatt, chr: BluetoothGattCharacteristic) {
+            onCharacteristicChanged(g, chr, chr.value ?: return)
+        }
+
+        override fun onCharacteristicRead(
+            g: BluetoothGatt, chr: BluetoothGattCharacteristic, value: ByteArray, status: Int
+        ) {
+            if (status == BluetoothGatt.GATT_SUCCESS && chr.uuid == GattUuids.CONFIG)
+                parseConfig(value)
+        }
+
+        override fun onCharacteristicWrite(
+            g: BluetoothGatt, chr: BluetoothGattCharacteristic, status: Int
+        ) { writeResult.value = status == BluetoothGatt.GATT_SUCCESS }
+    }
+
+    private fun enableNotification(g: BluetoothGatt, uuid: java.util.UUID) {
+        val chr = g.getService(GattUuids.SERVICE)?.getCharacteristic(uuid) ?: return
+        g.setCharacteristicNotification(chr, true)
+        val cccd = chr.getDescriptor(GattUuids.CCCD) ?: return
+        if (Build.VERSION.SDK_INT >= 33) {
+            g.writeDescriptor(cccd, BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE)
+        } else {
+            @Suppress("DEPRECATION")
+            cccd.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
+            @Suppress("DEPRECATION")
+            g.writeDescriptor(cccd)
+        }
+    }
+
+    private fun readConfig(g: BluetoothGatt) {
+        val chr = g.getService(GattUuids.SERVICE)?.getCharacteristic(GattUuids.CONFIG) ?: return
+        g.readCharacteristic(chr)
+    }
+
+    private fun parseConfig(value: ByteArray) {
+        if (value.size < 4) return
+        val flags = value[1].toInt()
+        val interval = ByteBuffer.wrap(value, 2, 2).order(ByteOrder.LITTLE_ENDIAN).short.toInt() and 0xFFFF
+        configData.value = Triple(flags and 0x01 != 0, flags and 0x02 != 0, interval)
+    }
+
+    private fun parseTelemetry(value: ByteArray) {
+        if (value.size < 16) return
+        val bb = ByteBuffer.wrap(value).order(ByteOrder.LITTLE_ENDIAN)
+        bb.get() // version
+        val flags = bb.get().toInt() and 0xFF
+        val seq   = bb.short.toInt() and 0xFFFF
+        val uptime = bb.int.toLong() and 0xFFFFFFFFL
+        val tempRaw  = bb.short.toInt()
+        val humRaw   = bb.short.toInt() and 0xFFFF
+        val pressRaw = bb.int.toLong() and 0xFFFFFFFFL
+        telemetry.value = TelemetryData(
+            tempC         = tempRaw / 100f,
+            humidityPct   = humRaw  / 100f,
+            pressureHpa   = pressRaw / 100f,
+            sensorValid   = flags and 0x01 != 0,
+            simulated     = flags and 0x02 != 0,
+            lowBattery    = flags and 0x04 != 0,
+            sequence      = seq,
+            uptimeMs      = uptime
+        )
+    }
+
+    private fun parseStatus(value: ByteArray) {
+        if (value.size < 6) return
+        status.value = StatusData(
+            appState    = value[0].toInt() and 0xFF,
+            lastError   = value[1].toInt() and 0xFF,
+            connected   = value[2] != 0.toByte(),
+            subscribed  = value[3] != 0.toByte(),
+            ledOn       = value[4] != 0.toByte(),
+            sensorValid = value[5] != 0.toByte()
+        )
+    }
+
+    fun sendControl(opcode: Byte, value: Byte = 0x00) {
+        val g = gatt ?: return
+        val chr = g.getService(GattUuids.SERVICE)?.getCharacteristic(GattUuids.CONTROL) ?: return
+        val payload = byteArrayOf(opcode, value)
+        if (Build.VERSION.SDK_INT >= 33) {
+            g.writeCharacteristic(chr, payload, BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT)
+        } else {
+            @Suppress("DEPRECATION")
+            chr.value = payload
+            @Suppress("DEPRECATION")
+            g.writeCharacteristic(chr)
+        }
+    }
+
+    fun sendSensorOverride(tempCdeg: Int, humCpct: Int, pressHpaX10: Int) {
+        val g = gatt ?: return
+        val chr = g.getService(GattUuids.SERVICE)?.getCharacteristic(GattUuids.SENSOR_OVERRIDE) ?: return
+        val bb = ByteBuffer.allocate(6).order(ByteOrder.LITTLE_ENDIAN)
+        bb.putShort(tempCdeg.toShort())
+        bb.putShort(humCpct.toShort())
+        bb.putShort(pressHpaX10.toShort())
+        val payload = bb.array()
+        if (Build.VERSION.SDK_INT >= 33) {
+            g.writeCharacteristic(chr, payload, BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT)
+        } else {
+            @Suppress("DEPRECATION")
+            chr.value = payload
+            @Suppress("DEPRECATION")
+            g.writeCharacteristic(chr)
+        }
+    }
+
+    fun clearSensorOverride() = sendSensorOverride(0, 0, 0)
+
+    fun writeConfig(notifDefault: Boolean, displayOffBoot: Boolean, intervalMs: Int) {
+        val g = gatt ?: return
+        val chr = g.getService(GattUuids.SERVICE)?.getCharacteristic(GattUuids.CONFIG) ?: return
+        val flags = ((if (notifDefault) 0x01 else 0) or (if (displayOffBoot) 0x02 else 0)).toByte()
+        val bb = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN)
+        bb.put(0x01) // version
+        bb.put(flags)
+        bb.putShort(intervalMs.toShort())
+        val payload = bb.array()
+        if (Build.VERSION.SDK_INT >= 33) {
+            g.writeCharacteristic(chr, payload, BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT)
+        } else {
+            @Suppress("DEPRECATION")
+            chr.value = payload
+            @Suppress("DEPRECATION")
+            g.writeCharacteristic(chr)
+        }
+    }
+}
