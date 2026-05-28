@@ -7,7 +7,7 @@ static const char *TAG = "tinyml";
 
 esp_err_t tinyml_inference_init(void)
 {
-    ESP_LOGI(TAG, "Pure-C MLP inference ready (3→16→8→5 classifier + 3→8→3 anomaly detector)");
+    ESP_LOGI(TAG, "Pure-C MLP inference ready (3→16→8→5, anomaly threshold: confidence < 50%%)");
     return ESP_OK;
 }
 
@@ -32,23 +32,6 @@ static void relu(float *x, int n)
     }
 }
 
-static void sigmoid(float *x, int n)
-{
-    for (int i = 0; i < n; i++) {
-        x[i] = 1.0f / (1.0f + expf(-x[i]));
-    }
-}
-
-static float reconstruction_error(const float *original, const float *recon, int n)
-{
-    float mse = 0.0f;
-    for (int i = 0; i < n; i++) {
-        float diff = original[i] - recon[i];
-        mse += diff * diff;
-    }
-    return mse / n;
-}
-
 ml_result_t tinyml_infer(float temp_c, float humidity_pct, float pressure_hpa)
 {
     /* Normalize to [0,1] matching training NORM constants */
@@ -58,21 +41,6 @@ ml_result_t tinyml_infer(float temp_c, float humidity_pct, float pressure_hpa)
         (pressure_hpa - 900.0f)  / 200.0f,
     };
 
-    /* --- Anomaly detection (autoencoder) --- */
-    float ae_hidden[ML_AE_HIDDEN_SIZE];
-    float ae_recon[ML_INPUT_SIZE];
-    dense(input, ML_INPUT_SIZE,    ML_AE_We, ML_AE_be, ae_hidden, ML_AE_HIDDEN_SIZE);
-    relu(ae_hidden, ML_AE_HIDDEN_SIZE);
-    dense(ae_hidden, ML_AE_HIDDEN_SIZE, ML_AE_Wd, ML_AE_bd, ae_recon, ML_INPUT_SIZE);
-    sigmoid(ae_recon, ML_INPUT_SIZE);
-
-    float err = reconstruction_error(input, ae_recon, ML_INPUT_SIZE);
-    if (err > ML_ANOMALY_THRESHOLD) {
-        uint8_t conf = (uint8_t)(fminf((err / ML_ANOMALY_THRESHOLD - 1.0f) * 50.0f, 100.0f));
-        return (ml_result_t){ .class_id = ML_CLASS_ANOMALY, .confidence = conf };
-    }
-
-    /* --- Classifier (3→16→8→5 MLP) --- */
     float h1[ML_LAYER1_SIZE];
     float h2[ML_LAYER2_SIZE];
     float out[ML_OUTPUT_SIZE];
@@ -95,9 +63,16 @@ ml_result_t tinyml_infer(float temp_c, float humidity_pct, float pressure_hpa)
     }
     for (int i = 0; i < ML_OUTPUT_SIZE; i++) out[i] /= sum;
 
+    /* Argmax */
     int best = 0;
     for (int i = 1; i < ML_OUTPUT_SIZE; i++) {
         if (out[i] > out[best]) best = i;
+    }
+
+    /* Anomaly: classifier is uncertain — input doesn't fit any known class */
+    if (out[best] < 0.50f) {
+        uint8_t conf = (uint8_t)((1.0f - out[best]) * 100.0f);
+        return (ml_result_t){ .class_id = ML_CLASS_ANOMALY, .confidence = conf };
     }
 
     return (ml_result_t){
