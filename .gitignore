@@ -7,6 +7,17 @@ firmware/test_app/sdkconfig
 # Python
 __pycache__/
 *.pyc
+ml/.venv/
+
+# Android build artifacts
+android/BleEnvNode/.gradle/
+android/BleEnvNode/app/build/
+android/BleEnvNode/build/
+android/BleEnvNode/local.properties
+
+# ESP-IDF extra artifacts
+firmware/.clangd
+firmware/sdkconfig.old
 
 # OS/editor
 .DS_Store
