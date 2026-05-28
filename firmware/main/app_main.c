@@ -3,6 +3,7 @@
 #include "sensor_provider.h"
 #include "storage_config.h"
 #include "ble_env_service.h"
+#include "tinyml_inference.h"
 #include "display.h"
 #include "esp_log.h"
 #include "esp_pm.h"
@@ -30,6 +31,19 @@ static void telemetry_task(void *arg)
         display_set_state(state.runtime_state);
         display_set_telemetry(&sample);
         ble_env_service_notify_telemetry(&sample, seq);
+
+        /* TinyML inference — notify b7e00007 only on class change */
+        static ml_class_t s_last_class = ML_CLASS_COMFORTABLE;
+        ml_result_t ml = tinyml_infer(
+            sample.temperature_c_x100 / 100.0f,
+            sample.humidity_pct_x100  / 100.0f,
+            sample.pressure_pa        / 100.0f   /* Pa → hPa */
+        );
+        if (ml.class_id != s_last_class) {
+            s_last_class = ml.class_id;
+            ble_env_service_notify_ml_alert((uint8_t)ml.class_id, ml.confidence);
+            ESP_LOGI(TAG, "ML class changed → %d (conf %u%%)", ml.class_id, ml.confidence);
+        }
 
         /* Apply power mode transitions once per sample cycle. */
         app_power_mode_t mode = app_state_get_power_mode();
@@ -72,6 +86,10 @@ void app_main(void)
     ESP_ERROR_CHECK(sensor_provider_init());
     app_state_set_runtime(APP_STATE_INIT_SENSOR);
     ESP_LOGI(TAG, "Sensor provider initialized");
+
+    if (tinyml_inference_init() != ESP_OK) {
+        ESP_LOGW(TAG, "TinyML init failed — ML alerts disabled");
+    }
 
     display_init();
     ESP_LOGI(TAG, "Display initialized");
