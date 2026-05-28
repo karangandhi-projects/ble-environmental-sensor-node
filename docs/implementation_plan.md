@@ -230,6 +230,37 @@ Docs updated:
 - tests/manual_test_matrix.md — TC-SEC-01..TC-SEC-03 rows marked Pass. ✓
 - docs/debug_guide.md — BLE pairing section added. ✓
 
+## Phase 9A — GATT v2 + Sensor Override ✓ DONE (2026-05-28)
+
+Goal: Upgrade GATT profile to v2 with Sensor Override + ML Alert characteristics.
+
+Exit criteria:
+- [DONE] idf.py build green (0x98410 bytes, 61% flash).
+- [DONE] All 6 characteristics visible in nRF Connect (b7e00002–b7e00007) with 0x2901 User Description descriptors.
+- [DONE] Sensor override write (F6 09 8C 17 C8 8B 01 00) locks telemetry values on hardware.
+- [DONE] All-zeros write clears override and restores drifting simulation.
+- [DONE] Device connected + bonded throughout.
+
+## Phase 9B — Android Companion App (pending build + install)
+
+Goal: Kotlin/Jetpack Compose app targeting GATT v2 profile.
+
+Exit criteria:
+- ./gradlew assembleDebug succeeds.
+- App scans, pairs, shows live telemetry.
+- Sensor slider writes change telemetry values.
+- CSV export works.
+
+## Phase 9C — TinyML Edge Inference (pending data collection)
+
+Goal: Train 5-class classifier, deploy TFLite Micro on ESP32-C3.
+
+Exit criteria:
+- Real labeled CSVs collected via Android app.
+- model.tflite accuracy ≥ 0.85 on test set.
+- tinyml_inference firmware component builds.
+- b7e00007 ML Alert notifies on class change.
+
 ## Phase 9 — Real Sensor Adapter
 
 Goal: Replace simulated values with a real I2C sensor.
