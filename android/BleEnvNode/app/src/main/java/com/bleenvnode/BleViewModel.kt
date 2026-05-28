@@ -30,6 +30,10 @@ class BleViewModel(app: Application) : AndroidViewModel(app) {
     private val _deepSleepConfirmPending = MutableStateFlow(false)
     val deepSleepConfirmPending: StateFlow<Boolean> = _deepSleepConfirmPending
 
+    val overrideTempC    = MutableStateFlow(25f)
+    val overrideHumPct   = MutableStateFlow(60f)
+    val overridePressHpa = MutableStateFlow(1013f)
+
     init {
         viewModelScope.launch {
             telemetry.collect { t ->
