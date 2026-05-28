@@ -241,15 +241,16 @@ Exit criteria:
 - [DONE] All-zeros write clears override and restores drifting simulation.
 - [DONE] Device connected + bonded throughout.
 
-## Phase 9B — Android Companion App (pending build + install)
+## Phase 9B — Android Companion App ✓ DONE (2026-05-28)
 
 Goal: Kotlin/Jetpack Compose app targeting GATT v2 profile.
 
 Exit criteria:
-- ./gradlew assembleDebug succeeds.
-- App scans, pairs, shows live telemetry.
-- Sensor slider writes change telemetry values.
-- CSV export works.
+- [DONE] ./gradlew assembleDebug succeeds.
+- [DONE] App scans, pairs, shows live telemetry.
+- [DONE] Sensor slider writes change telemetry values (confirmed on hardware).
+- [DONE] Display on/off commands work from Controls tab.
+- [DONE] CSV export works.
 
 ## Phase 9C — TinyML Edge Inference (pending data collection)
 
