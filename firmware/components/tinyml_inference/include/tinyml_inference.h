@@ -9,6 +9,7 @@ typedef enum {
     ML_CLASS_COLD        = 2,
     ML_CLASS_HUMID       = 3,
     ML_CLASS_DANGER      = 4,
+    ML_CLASS_ANOMALY     = 5,
 } ml_class_t;
 
 typedef struct {
