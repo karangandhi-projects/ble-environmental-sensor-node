@@ -29,10 +29,16 @@ void sensor_provider_clear_override(void)
 sensor_sample_t sensor_provider_read(void)
 {
     if (s_override_active) {
+        /* Add small time-based drift around the set value to mimic a real sensor.
+         * Drift pattern: ±2°C, ±2% RH, ±2 hPa — changes every ~4 seconds. */
+        int64_t t = esp_timer_get_time() / 1000000;
+        int16_t temp_drift     = (int16_t)((t % 5) - 2) * 100;   /* -200..+200 (0.01°C units) */
+        int16_t hum_drift      = (int16_t)((t % 5) - 2) * 100;   /* -200..+200 (0.01% units) */
+        int32_t press_drift    = ((t % 5) - 2) * 200;             /* -400..+400 Pa (~±2 hPa) */
         return (sensor_sample_t){
-            .temperature_c_x100 = s_override_temp_cdeg,
-            .humidity_pct_x100  = s_override_humidity_cpct,
-            .pressure_pa        = (uint32_t)s_override_pressure_hpa_x10 * 10,
+            .temperature_c_x100 = s_override_temp_cdeg     + temp_drift,
+            .humidity_pct_x100  = (uint16_t)((int32_t)s_override_humidity_cpct + hum_drift),
+            .pressure_pa        = (uint32_t)((int32_t)s_override_pressure_hpa_x10 * 10 + press_drift),
             .valid              = true,
             .simulated          = true,
         };
