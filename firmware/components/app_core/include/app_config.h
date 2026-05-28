@@ -47,3 +47,11 @@
 
 /* Phase 7: config characteristic flags. */
 #define BLE_ENV_CONFIG_FLAG_DISPLAY_OFF  (1u << 1)  /* display off by default on boot */
+
+/* Phase 9C: TinyML alert classes (b7e00007 ML Alert characteristic). */
+#define BLE_ENV_ML_CLASS_COMFORTABLE  0
+#define BLE_ENV_ML_CLASS_WARM         1
+#define BLE_ENV_ML_CLASS_COLD         2
+#define BLE_ENV_ML_CLASS_HUMID        3
+#define BLE_ENV_ML_CLASS_DANGER       4
+#define BLE_ENV_ML_CLASS_ANOMALY      5

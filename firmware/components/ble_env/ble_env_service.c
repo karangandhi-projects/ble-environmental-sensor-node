@@ -1,4 +1,6 @@
 #include "ble_env_service.h"
+#include "sensor_provider.h"
+#include <string.h>
 #include "app_config.h"
 #include "app_state.h"
 #include "storage_config.h"
@@ -24,12 +26,16 @@ static uint16_t s_conn_handle = BLE_HS_CONN_HANDLE_NONE;
 static uint16_t s_telemetry_val_handle;
 static uint16_t s_status_val_handle;
 static esp_timer_handle_t s_deep_sleep_timer;
+static uint16_t s_ml_alert_val_handle;
+static bool     s_ml_alert_subscribed = false;
 
 static const ble_uuid128_t ENV_SERVICE_UUID = BLE_UUID128_INIT(0x00,0x00,0x00,0x6c,0x6a,0x2f,0x7d,0x8b,0x2a,0x4c,0x4a,0x4f,0x01,0x00,0xe0,0xb7);
 static const ble_uuid128_t TELEMETRY_UUID   = BLE_UUID128_INIT(0x00,0x00,0x00,0x6c,0x6a,0x2f,0x7d,0x8b,0x2a,0x4c,0x4a,0x4f,0x02,0x00,0xe0,0xb7);
 static const ble_uuid128_t CONTROL_UUID     = BLE_UUID128_INIT(0x00,0x00,0x00,0x6c,0x6a,0x2f,0x7d,0x8b,0x2a,0x4c,0x4a,0x4f,0x03,0x00,0xe0,0xb7);
 static const ble_uuid128_t CONFIG_UUID      = BLE_UUID128_INIT(0x00,0x00,0x00,0x6c,0x6a,0x2f,0x7d,0x8b,0x2a,0x4c,0x4a,0x4f,0x04,0x00,0xe0,0xb7);
-static const ble_uuid128_t STATUS_UUID      = BLE_UUID128_INIT(0x00,0x00,0x00,0x6c,0x6a,0x2f,0x7d,0x8b,0x2a,0x4c,0x4a,0x4f,0x05,0x00,0xe0,0xb7);
+static const ble_uuid128_t STATUS_UUID          = BLE_UUID128_INIT(0x00,0x00,0x00,0x6c,0x6a,0x2f,0x7d,0x8b,0x2a,0x4c,0x4a,0x4f,0x05,0x00,0xe0,0xb7);
+static const ble_uuid128_t SENSOR_OVERRIDE_UUID = BLE_UUID128_INIT(0x00,0x00,0x00,0x6c,0x6a,0x2f,0x7d,0x8b,0x2a,0x4c,0x4a,0x4f,0x06,0x00,0xe0,0xb7);
+static const ble_uuid128_t ML_ALERT_UUID        = BLE_UUID128_INIT(0x00,0x00,0x00,0x6c,0x6a,0x2f,0x7d,0x8b,0x2a,0x4c,0x4a,0x4f,0x07,0x00,0xe0,0xb7);
 
 
 static void encode_telemetry(uint8_t out[16], const sensor_sample_t *sample, uint16_t sequence)
@@ -56,6 +62,15 @@ static void encode_status(uint8_t out[6])
     out[3] = s.telemetry_subscribed ? 1 : 0;
     out[4] = s.led_on ? 1 : 0;
     out[5] = s.sensor_valid ? 1 : 0;
+}
+
+static int gatt_user_desc_cb(uint16_t conn_handle, uint16_t attr_handle,
+                              struct ble_gatt_access_ctxt *ctxt, void *arg)
+{
+    (void)conn_handle; (void)attr_handle;
+    const char *desc = (const char *)arg;
+    return os_mbuf_append(ctxt->om, desc, strlen(desc)) == 0
+           ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
 }
 
 static int gatt_access_cb(uint16_t conn_handle, uint16_t attr_handle,
@@ -168,6 +183,34 @@ static int gatt_access_cb(uint16_t conn_handle, uint16_t attr_handle,
         return 0;
     }
 
+    if (ble_uuid_cmp(uuid, &SENSOR_OVERRIDE_UUID.u) == 0
+        && ctxt->op == BLE_GATT_ACCESS_OP_WRITE_CHR) {
+        uint8_t buf[6];
+        uint16_t len = OS_MBUF_PKTLEN(ctxt->om);
+        if (len != sizeof(buf)) {
+            app_state_set_error(APP_ERROR_INVALID_COMMAND);
+            return BLE_ATT_ERR_INVALID_ATTR_VALUE_LEN;
+        }
+        ble_hs_mbuf_to_flat(ctxt->om, buf, sizeof(buf), NULL);
+
+        bool all_zeros = true;
+        for (int i = 0; i < 6; i++) {
+            if (buf[i] != 0) { all_zeros = false; break; }
+        }
+
+        if (all_zeros) {
+            sensor_provider_clear_override();
+        } else {
+            int16_t  temp     = (int16_t) ((uint16_t)buf[0] | ((uint16_t)buf[1] << 8));
+            uint16_t humidity = (uint16_t)((uint16_t)buf[2] | ((uint16_t)buf[3] << 8));
+            uint16_t pressure = (uint16_t)((uint16_t)buf[4] | ((uint16_t)buf[5] << 8));
+            sensor_provider_set_override(temp, humidity, pressure);
+        }
+        app_state_set_error(APP_ERROR_OK);
+        ble_env_service_notify_status();
+        return 0;
+    }
+
     return BLE_ATT_ERR_UNLIKELY;
 }
 
@@ -176,10 +219,70 @@ static const struct ble_gatt_svc_def gatt_svcs[] = {
         .type = BLE_GATT_SVC_TYPE_PRIMARY,
         .uuid = &ENV_SERVICE_UUID.u,
         .characteristics = (struct ble_gatt_chr_def[]) {
-            { .uuid = &TELEMETRY_UUID.u, .access_cb = gatt_access_cb, .val_handle = &s_telemetry_val_handle, .flags = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_NOTIFY },
-            { .uuid = &CONTROL_UUID.u, .access_cb = gatt_access_cb, .flags = BLE_GATT_CHR_F_WRITE | BLE_GATT_CHR_F_WRITE_ENC },
-            { .uuid = &CONFIG_UUID.u, .access_cb = gatt_access_cb, .flags = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_WRITE | BLE_GATT_CHR_F_READ_ENC | BLE_GATT_CHR_F_WRITE_ENC },
-            { .uuid = &STATUS_UUID.u, .access_cb = gatt_access_cb, .val_handle = &s_status_val_handle, .flags = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_NOTIFY },
+            {
+                .uuid       = &TELEMETRY_UUID.u,
+                .access_cb  = gatt_access_cb,
+                .val_handle = &s_telemetry_val_handle,
+                .flags      = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_NOTIFY,
+                .descriptors = (struct ble_gatt_dsc_def[]) {
+                    { .uuid = BLE_UUID16_DECLARE(0x2901), .att_flags = BLE_ATT_F_READ,
+                      .access_cb = gatt_user_desc_cb, .arg = "Telemetry" },
+                    { 0 }
+                },
+            },
+            {
+                .uuid      = &CONTROL_UUID.u,
+                .access_cb = gatt_access_cb,
+                .flags     = BLE_GATT_CHR_F_WRITE | BLE_GATT_CHR_F_WRITE_ENC,
+                .descriptors = (struct ble_gatt_dsc_def[]) {
+                    { .uuid = BLE_UUID16_DECLARE(0x2901), .att_flags = BLE_ATT_F_READ,
+                      .access_cb = gatt_user_desc_cb, .arg = "Control" },
+                    { 0 }
+                },
+            },
+            {
+                .uuid      = &CONFIG_UUID.u,
+                .access_cb = gatt_access_cb,
+                .flags     = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_WRITE
+                           | BLE_GATT_CHR_F_READ_ENC | BLE_GATT_CHR_F_WRITE_ENC,
+                .descriptors = (struct ble_gatt_dsc_def[]) {
+                    { .uuid = BLE_UUID16_DECLARE(0x2901), .att_flags = BLE_ATT_F_READ,
+                      .access_cb = gatt_user_desc_cb, .arg = "Configuration" },
+                    { 0 }
+                },
+            },
+            {
+                .uuid       = &STATUS_UUID.u,
+                .access_cb  = gatt_access_cb,
+                .val_handle = &s_status_val_handle,
+                .flags      = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_NOTIFY,
+                .descriptors = (struct ble_gatt_dsc_def[]) {
+                    { .uuid = BLE_UUID16_DECLARE(0x2901), .att_flags = BLE_ATT_F_READ,
+                      .access_cb = gatt_user_desc_cb, .arg = "Status" },
+                    { 0 }
+                },
+            },
+            {
+                .uuid      = &SENSOR_OVERRIDE_UUID.u,
+                .access_cb = gatt_access_cb,
+                .flags     = BLE_GATT_CHR_F_WRITE | BLE_GATT_CHR_F_WRITE_ENC,
+                .descriptors = (struct ble_gatt_dsc_def[]) {
+                    { .uuid = BLE_UUID16_DECLARE(0x2901), .att_flags = BLE_ATT_F_READ,
+                      .access_cb = gatt_user_desc_cb, .arg = "Sensor Override" },
+                    { 0 }
+                },
+            },
+            {
+                .uuid       = &ML_ALERT_UUID.u,
+                .access_cb  = gatt_access_cb,
+                .val_handle = &s_ml_alert_val_handle,
+                .flags      = BLE_GATT_CHR_F_NOTIFY,
+                .descriptors = (struct ble_gatt_dsc_def[]) {
+                    { .uuid = BLE_UUID16_DECLARE(0x2901), .att_flags = BLE_ATT_F_READ,
+                      .access_cb = gatt_user_desc_cb, .arg = "ML Alert" },
+                    { 0 }
+                },
+            },
             { 0 }
         },
     },
@@ -205,6 +308,7 @@ static int gap_event_cb(struct ble_gap_event *event, void *arg)
             ESP_LOGI(TAG, "Disconnected (reason=0x%02x)", event->disconnect.reason);
             s_conn_handle = BLE_HS_CONN_HANDLE_NONE;
             app_state_set_connected(false);
+            s_ml_alert_subscribed = false;
             if (app_state_get_deep_sleep_pending()) {
                 app_state_clear_deep_sleep_pending();
                 ESP_LOGI(TAG, "Entering deep sleep for 30 s");
@@ -219,6 +323,8 @@ static int gap_event_cb(struct ble_gap_event *event, void *arg)
                 app_state_set_telemetry_subscribed(event->subscribe.cur_notify);
             } else if (event->subscribe.attr_handle == s_status_val_handle) {
                 app_state_set_status_subscribed(event->subscribe.cur_notify);
+            } else if (event->subscribe.attr_handle == s_ml_alert_val_handle) {
+                s_ml_alert_subscribed = event->subscribe.cur_notify;
             }
             break;
         case BLE_GAP_EVENT_ENC_CHANGE:
@@ -398,5 +504,19 @@ esp_err_t ble_env_service_notify_status(void)
         return ESP_ERR_NO_MEM;
     }
     int rc = ble_gatts_notify_custom(s_conn_handle, s_status_val_handle, om);
+    return rc == 0 ? ESP_OK : ESP_FAIL;
+}
+
+esp_err_t ble_env_service_notify_ml_alert(uint8_t ml_class, uint8_t confidence)
+{
+    app_state_t s = app_state_get_snapshot();
+    if (!s.connected || !s_ml_alert_subscribed
+        || s_conn_handle == BLE_HS_CONN_HANDLE_NONE) {
+        return ESP_OK;
+    }
+    uint8_t buf[2] = { ml_class, confidence };
+    struct os_mbuf *om = ble_hs_mbuf_from_flat(buf, sizeof(buf));
+    if (!om) return ESP_ERR_NO_MEM;
+    int rc = ble_gatts_notify_custom(s_conn_handle, s_ml_alert_val_handle, om);
     return rc == 0 ? ESP_OK : ESP_FAIL;
 }

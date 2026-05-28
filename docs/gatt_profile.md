@@ -1,5 +1,7 @@
 # GATT Profile
 
+> **Profile Status: [FROZEN v2]** — Characteristics b7e00002–b7e00007 and all 0x2901 descriptors are locked. No changes without explicit user approval.
+
 ## Profile Name
 
 BLE Environmental Node Profile
@@ -22,13 +24,15 @@ Characteristic UUIDs replace the `0000` field.
 
 UUID: `b7e00001-4f4a-4c2a-8b7d-2f6a6c000000`
 
-Purpose: Custom service containing telemetry, control, configuration, and status.
+Purpose: Custom service containing telemetry, control, configuration, status, sensor override, and ML alerts.
 
 ## Characteristics
 
 ### Telemetry Characteristic
 
 UUID: `b7e00002-4f4a-4c2a-8b7d-2f6a6c000000`
+
+User Description (0x2901): `"Telemetry"`
 
 Properties:
 - Read
@@ -58,9 +62,10 @@ Flags:
 
 UUID: `b7e00003-4f4a-4c2a-8b7d-2f6a6c000000`
 
+User Description (0x2901): `"Control"`
+
 Properties:
-- Write
-- Write Without Response optional later
+- Write (encrypted)
 
 Payload:
 
@@ -89,9 +94,11 @@ Invalid opcodes or invalid value bytes update status last_error to invalid comma
 
 UUID: `b7e00004-4f4a-4c2a-8b7d-2f6a6c000000`
 
+User Description (0x2901): `"Configuration"`
+
 Properties:
-- Read
-- Write
+- Read (encrypted)
+- Write (encrypted)
 
 Payload:
 
@@ -115,6 +122,8 @@ Flags:
 
 UUID: `b7e00005-4f4a-4c2a-8b7d-2f6a6c000000`
 
+User Description (0x2901): `"Status"`
+
 Properties:
 - Read
 - Notify
@@ -130,6 +139,49 @@ Payload:
 | 4 | 1 | led_state | uint8 |
 | 5 | 1 | sensor_valid | uint8 |
 
+---
+
+### Sensor Override Characteristic
+
+UUID: `b7e00006-4f4a-4c2a-8b7d-2f6a6c000000`
+
+User Description (0x2901): `"Sensor Override"`
+
+Properties: Write (encrypted)
+
+Payload: 6 bytes, little-endian
+
+| Bytes | Field | Type | Units |
+|-------|-------|------|-------|
+| 0–1 | temperature | int16 | °C × 100 |
+| 2–3 | humidity | uint16 | % × 100 |
+| 4–5 | pressure | uint16 | hPa × 10 |
+
+Write all-zeros (`0x00 0x00 0x00 0x00 0x00 0x00`) to clear the override and resume random simulation.
+
+Slider ranges: Temp −10–60 °C, Humidity 0–100%, Pressure 900–1100 hPa.
+
+---
+
+### ML Alert Characteristic
+
+UUID: `b7e00007-4f4a-4c2a-8b7d-2f6a6c000000`
+
+User Description (0x2901): `"ML Alert"`
+
+Properties: Notify (open — no encryption required)
+
+Payload: 2 bytes
+
+| Byte | Field | Values |
+|------|-------|--------|
+| 0 | class | 0=comfortable, 1=warm, 2=cold, 3=humid, 4=danger, 5=anomaly |
+| 1 | confidence | 0–100 (model softmax × 100) |
+
+Notification sent only when class changes. Used in Phase C (TFLite Micro edge deployment).
+
+---
+
 ## Security Requirements (Phase 8)
 
 Link-layer encryption is required for the following operations. NimBLE enforces this at the ATT layer and returns ATT error `0x05` (Insufficient Authentication) if the connection is not encrypted. This triggers the central to initiate pairing (Just Works, no PIN).
@@ -140,6 +192,8 @@ Link-layer encryption is required for the following operations. NimBLE enforces 
 | Control | — | **encrypted** |
 | Config | **encrypted** | **encrypted** |
 | Status | open | — |
+| Sensor Override | — | **encrypted** |
+| ML Alert | open (notify only) | — |
 
 Pairing method: Just Works (`BLE_HS_IO_NO_INPUT_OUTPUT`). Bonding enabled; keys persisted in NVS. Bonded centrals reconnect with encryption restored automatically.
 
