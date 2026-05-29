@@ -39,15 +39,31 @@ MVP started without mandatory pairing so that BLE discovery, GATT reads, writes,
 | Config | encrypted | encrypted |
 | Status | open | — |
 
-**Pairing method**: Just Works (`BLE_HS_IO_NO_INPUT_OUTPUT`).
-- No PIN, no numeric comparison.
-- Provides link-layer encryption; no MITM protection.
-- Acceptable for a portfolio project where the ESP32-C3 has no display or keyboard.
+**Pairing method**: Passkey Display (`BLE_HS_IO_DISPLAY_ONLY`, `sm_mitm = 1`).
+- Peripheral generates a random 6-digit passkey shown on the OLED (`PAIR` label + digits).
+- Android prompts the user to type the passkey (PIN entry dialog).
+- Provides link-layer encryption **with MITM protection** — requires physical proximity to read the OLED.
+- Subsequent reconnects use stored bond keys; no passkey re-entry.
+
+**SM configuration (proven in firmware/test_mitm Phase A, 2026-05-29):**
+
+```c
+ble_hs_cfg.sm_io_cap          = BLE_HS_IO_DISPLAY_ONLY;
+ble_hs_cfg.sm_bonding         = 1;
+ble_hs_cfg.sm_mitm            = 1;
+ble_hs_cfg.sm_sc              = 1;
+ble_hs_cfg.store_status_cb    = ble_store_util_status_rr;
+ble_hs_cfg.sm_our_key_dist   |= BLE_SM_PAIR_KEY_DIST_ENC;
+ble_hs_cfg.sm_their_key_dist |= BLE_SM_PAIR_KEY_DIST_ENC;
+```
+
+The last three fields are required — omitting them causes "Incorrect PIN or passkey" on Android even when the correct passkey is entered.
+
+**Known limitation**: a 6-digit passkey (0–999999) provides ~20 bits of entropy. This protects against passive eavesdropping and active MITM, but not against an attacker with physical access who can observe the OLED and attempt many pairings.
 
 **Secure Connections**: enabled (`sm_sc = 1`, BLE 4.2+). All modern phones support this.
 
-**Key distribution**: ENC + ID (encryption key + IRK).
-- The IRK (Identity Resolving Key) allows the device to recognize a central using a Resolvable Private Address (RPA), enabling secure reconnection even when the central rotates its MAC address.
+**Key distribution**: ENC (encryption key).
 
 **Bond persistence**: `CONFIG_BT_NIMBLE_NVS_PERSIST=y`. Bond keys survive device reboot and deep sleep wakeup. The device re-advertises with the same static identity address, so bonded centrals reconnect and restore encryption automatically without re-pairing.
 
@@ -69,7 +85,7 @@ MVP started without mandatory pairing so that BLE discovery, GATT reads, writes,
 
 ## Pairing Methods
 
-Phase 8 uses **Just Works** for simplicity. The device has no display or keyboard, so numeric comparison and passkey entry are not possible. For higher assurance (MITM protection), a passkey could be printed to the serial log — documented here as a future option but not implemented.
+Phase 8 + Phase B use **Passkey Display** (`BLE_HS_IO_DISPLAY_ONLY`). The SSD1306 OLED shows a random 6-digit passkey during pairing; Android prompts the user to enter it. This provides MITM protection without requiring a keyboard on the device. See DD-020 and `firmware/test_mitm/` for Phase A validation history.
 
 ## Security Design Rules
 

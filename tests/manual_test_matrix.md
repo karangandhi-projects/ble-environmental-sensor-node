@@ -22,3 +22,5 @@
 | TC-SEC-02 | Just Works pairing via nRF Connect Bond | Pairing completes; encryption established; Control write succeeds | Pass |
 | TC-SEC-03 | Disconnect then reconnect (bonded) | Encryption restored without re-pairing; `Encryption established` in serial log | Pass |
 | TC-SEC-04 | Clear bond on central, reconnect | Pairing prompt shown; re-pair succeeds; write succeeds | Pass |
+| TC-SEC-05 | MITM passkey pairing | OLED shows PAIR + 6-digit passkey; Android prompts PIN entry; correct passkey → Encryption established | Not run |
+| TC-SEC-06 | Bond reconnect — no passkey | Disconnect and reconnect bonded device; no PIN dialog; serial shows Encryption established immediately | Not run |

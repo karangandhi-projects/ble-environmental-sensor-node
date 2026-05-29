@@ -22,7 +22,11 @@ This release covers a complete BLE environmental sensor peripheral with companio
 - **Simulated telemetry** — temperature, humidity, pressure with time-based ±2°C drift
 - **Configurable notification interval** — 500 ms–60 s, default 2 s, persisted in NVS
 - **BLE control** — LED, display power (on/off/dim), power mode (active/light sleep/deep sleep)
-- **BLE pairing** — Just Works + bonding with encrypted writes for Control/Config/Sensor Override. **Security note:** Just Works pairing does not protect against MITM (man-in-the-middle) attacks — any device in range can impersonate the central during the pairing handshake. Suitable for a development prototype; production use should implement passkey-entry or numeric-comparison pairing.
+- **BLE pairing** — MITM-protected Passkey Display + bonding with encrypted writes
+  for Control/Config/Sensor Override. The peripheral generates a random 6-digit
+  passkey shown on the OLED; Android prompts the user to enter it. Subsequent
+  reconnects restore encryption from stored bond keys without re-entering the
+  passkey. Protects against passive eavesdropping and MITM attacks.
 - **Sensor Override** — inject custom temp/humidity/pressure values via BLE write;
   all-zeros restores simulation
 - **TinyML classifier** — on-device 5-class environmental classification
@@ -59,7 +63,7 @@ Key decisions documented in `docs/design_decisions.md`:
 - **Telemetry task** (DD-003): all sensor reads and BLE notifies run in a single FreeRTOS
   task; no blocking inside callbacks
 - **NVS for config persistence** (DD-004): survives reboot without flash erase
-- **Just Works pairing** (DD-008): no display/keyboard, acceptable for prototype
+- **MITM Passkey Display** (DD-020): OLED shows 6-digit passkey; Android prompts entry; MITM-protected
 - **Pure-C MLP** (DD-015): no TFLite Micro dependency; 245 weights fit in IRAM
 
 ---
@@ -106,6 +110,7 @@ Android APK: `android/BleEnvNode/app/build/outputs/apk/debug/app-debug.apk`
 | Manual BLE tests | TC-001–TC-011 | Pass — nRF Connect |
 | Manual display tests | TC-D01–TC-D04 | Pass — physical OLED |
 | Manual security tests | TC-SEC-01–TC-SEC-04 | Pass — nRF Connect |
+| MITM passkey tests | TC-SEC-05–TC-SEC-06 | Pending hardware run |
 
 Full results: `tests/manual_test_matrix.md`
 

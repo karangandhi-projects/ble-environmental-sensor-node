@@ -213,6 +213,20 @@ Implementation: In `tinyml_infer()`, after softmax, if `out[best] < 0.50f` → r
 Tradeoff:
 - Cannot detect anomalies that happen to land inside a trained class region (e.g., a sensor fault that reads a plausible but wrong temperature). A real production system would need additional monitoring.
 
+## DD-020 MITM Passkey Display (Phase B)
+
+Decision: Replace Just Works pairing (`BLE_HS_IO_NO_INPUT_OUTPUT`, `sm_mitm=0`) with Passkey Display (`BLE_HS_IO_DISPLAY_ONLY`, `sm_mitm=1`).
+
+Reason:
+- Phase A validation (`firmware/test_mitm/`, 2026-05-29) confirmed that Passkey Entry works on ESP32-C3 + Android 16.
+- The SSD1306 OLED is already present — Passkey Display is the natural fit; no new hardware needed.
+- Just Works provides encryption but no MITM protection; any BLE device in range can impersonate the central during pairing.
+
+Key finding: three fields beyond changing `io_cap` and `mitm` flag are required for passkey pairing to succeed on Android — `store_status_cb`, `sm_our_key_dist |= BLE_SM_PAIR_KEY_DIST_ENC`, `sm_their_key_dist |= BLE_SM_PAIR_KEY_DIST_ENC`. Without them, pairing produces "Incorrect PIN or passkey" even with the correct passkey.
+
+Tradeoff:
+- Slightly more friction on first pair (user must type 6 digits). All subsequent reconnects are seamless (stored LTK).
+
 ## DD-014 Phase-by-Phase Human Checkpoints with Approval Gate
 
 Decision: Every phase ends with a structured report (code changes, build result, Unity result, manual TC result, doc updates, known issues), then waits for the user's go-ahead. Edits to existing source files require explicit user approval before the change is made; new files (tests, new modules, new docs) may be added freely.
