@@ -133,10 +133,19 @@ static void telemetry_task(void *arg)
             prev_mode = mode;
         }
 
-        /* Skip the interval delay if the BLE Control opcode 0x10 (force-sample)
-         * was received during this cycle — take the next sample immediately. */
+        /* Chunked delay: split report_interval_ms into ≤4 s slices and reset the
+         * WDT after each slice. Prevents TWDT fires when report_interval_ms > 5 s
+         * (the SDK auto-initialises the TWDT at 5 s before telemetry_task can
+         * reconfigure it). Also honours force-sample mid-interval. */
         if (!app_state_get_and_clear_force_sample()) {
-            vTaskDelay(pdMS_TO_TICKS(state.report_interval_ms));
+            uint32_t remaining = state.report_interval_ms;
+            while (remaining > 0) {
+                uint32_t chunk = remaining > 4000u ? 4000u : remaining;
+                vTaskDelay(pdMS_TO_TICKS(chunk));
+                esp_task_wdt_reset();
+                remaining -= chunk;
+                if (app_state_get_and_clear_force_sample()) break;
+            }
         }
     }
 }
