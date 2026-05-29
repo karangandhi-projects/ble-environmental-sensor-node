@@ -7,9 +7,9 @@
  * to advance the page clock and re-render if the active page changed.
  *
  * @par Page schedule
- * - Page 0 (BLE state):   3000 ms — shows BOOT/ADV/CONN/NOTIFY
- * - Page 1 (temperature): 1500 ms — large font, SIM badge if simulated
- * - Page 2 (humidity):    1500 ms — large font, SIM badge if simulated
+ * - Page 0 (temperature): 2000 ms — persistent state badge top-left, SIM top-right
+ * - Page 1 (humidity):    2000 ms — persistent state badge top-left, SIM top-right
+ * - Page 2 (pressure):    2000 ms — persistent state badge top-left, SIM top-right
  *
  * @par State updates
  * display_set_state() and display_set_telemetry() are called from the
@@ -46,8 +46,8 @@ static uint32_t s_passkey_value  = 0;
 uint8_t display_page_for_time(uint32_t now_ms)
 {
     uint32_t phase = now_ms % 6000;
-    if (phase < 3000) return 0;
-    if (phase < 4500) return 1;
+    if (phase < 2000) return 0;
+    if (phase < 4000) return 1;
     return 2;
 }
 
@@ -81,6 +81,11 @@ void display_format_humidity(uint16_t humidity_pct_x100, char *buf, uint8_t buf_
 {
     uint16_t pct = (humidity_pct_x100 + 50) / 100;   /* round to nearest % */
     snprintf(buf, buf_len, "%u%%", (unsigned)pct);
+}
+
+void display_format_pressure(uint32_t pressure_pa, char *buf, uint8_t buf_len)
+{
+    snprintf(buf, buf_len, "%uhP", (unsigned)(pressure_pa / 100));
 }
 
 bool display_should_show_sim_badge(uint8_t telemetry_flags)

@@ -3,9 +3,9 @@
  * @brief SSD1306 OLED page-rotator and render interface.
  *
  * Manages the three-page rotating display for BLE_ENV_NODE:
- * - Page 0 (3000 ms): BLE runtime state label (BOOT/ADV/CONN/NOTIFY)
- * - Page 1 (1500 ms): Latest temperature in large font
- * - Page 2 (1500 ms): Latest humidity in large font
+ * - Page 0 (2000 ms): Temperature — persistent state badge top-left, SIM top-right
+ * - Page 1 (2000 ms): Humidity   — persistent state badge top-left, SIM top-right
+ * - Page 2 (2000 ms): Pressure   — persistent state badge top-left, SIM top-right
  *
  * A `SIM` badge is drawn on pages 1 and 2 when the telemetry's simulated-data
  * flag (BLE_ENV_FLAG_SIMULATED_DATA) is set. Phase 9 real-sensor swap clears
@@ -67,7 +67,7 @@ void display_tick(uint32_t now_ms);
 
 /* ---- Pure-logic helpers — exported for Unity testing ---- */
 
-/* Return page index (0=BLE state 3000ms, 1=temperature 1500ms, 2=humidity 1500ms) for now_ms. */
+/* Return page index (0=temperature 2000ms, 1=humidity 2000ms, 2=pressure 2000ms) for now_ms. */
 uint8_t display_page_for_time(uint32_t now_ms);
 
 /* Map runtime state to short display label string. Returns a string literal. */
@@ -78,6 +78,10 @@ void display_format_temperature(int16_t temp_c_x100, char *buf, uint8_t buf_len)
 
 /* Format humidity into buf as "XX%". buf must be >= 5 bytes. */
 void display_format_humidity(uint16_t humidity_pct_x100, char *buf, uint8_t buf_len);
+
+/* Format pressure into buf as "XXXXhP" (integer hPa, truncated).
+ * pressure_pa / 100 = hPa. buf must be >= 8 bytes. */
+void display_format_pressure(uint32_t pressure_pa, char *buf, uint8_t buf_len);
 
 /* Return true if the SIM badge should be shown. */
 bool display_should_show_sim_badge(uint8_t telemetry_flags);

@@ -3,7 +3,8 @@
  * @brief Unity on-target tests for the display component's pure-logic helpers.
  *
  * Only display_page_for_time, display_state_label, display_format_temperature,
- * display_format_humidity, and display_should_show_sim_badge are exercised here.
+ * display_format_humidity, display_should_show_sim_badge, display_format_passkey,
+ * and display_format_pressure are exercised here.
  *
  * display_init, display_tick, and any ssd1306 function are NOT called — those
  * require hardware and are verified manually via nRF Connect / OLED inspection.
