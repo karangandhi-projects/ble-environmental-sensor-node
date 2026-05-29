@@ -39,6 +39,7 @@
 #include "app_state.h"
 #include "storage_config.h"
 #include "display.h"
+#include "esp_random.h"
 #include "esp_log.h"
 #include "esp_timer.h"
 #include "esp_sleep.h"
@@ -359,12 +360,17 @@ static int gap_event_cb(struct ble_gap_event *event, void *arg)
                 s_conn_handle = event->connect.conn_handle;
                 app_state_set_connected(true);
                 ESP_LOGI(TAG, "Connected");
+                /* Proactively send Security Request so Android shows the pairing
+                 * dialog immediately on connect. Do NOT use a timer — direct call
+                 * proven safe in Phase A (timer was the Phase 8 bug). */
+                ble_gap_security_initiate(event->connect.conn_handle);
             } else {
                 ESP_LOGW(TAG, "Connect failed; restarting advertising");
                 advertise();
             }
             break;
         case BLE_GAP_EVENT_DISCONNECT:
+            display_clear_passkey();  /* pairing may have been in progress */
             ESP_LOGI(TAG, "Disconnected (reason=0x%02x)", event->disconnect.reason);
             s_conn_handle = BLE_HS_CONN_HANDLE_NONE;
             app_state_set_connected(false);
@@ -388,6 +394,7 @@ static int gap_event_cb(struct ble_gap_event *event, void *arg)
             }
             break;
         case BLE_GAP_EVENT_ENC_CHANGE:
+            display_clear_passkey();  /* end passkey display regardless of result */
             if (event->enc_change.status == 0) {
                 ESP_LOGI(TAG, "Encryption established (conn %u)",
                          event->enc_change.conn_handle);
@@ -408,9 +415,10 @@ static int gap_event_cb(struct ble_gap_event *event, void *arg)
                 ble_sm_inject_io(event->passkey.conn_handle, &pkey);
             } else if (event->passkey.params.action == BLE_SM_IOACT_DISP) {
                 pkey.action  = BLE_SM_IOACT_DISP;
-                pkey.passkey = 123456;
-                ESP_LOGI(TAG, "Pairing passkey: %06lu — enter this in nRF Connect",
+                pkey.passkey = (uint32_t)(esp_random() % 1000000u);
+                ESP_LOGI(TAG, "Pairing passkey: %06lu — enter on phone",
                          (unsigned long)pkey.passkey);
+                display_set_passkey(pkey.passkey);
                 ble_sm_inject_io(event->passkey.conn_handle, &pkey);
             }
             return 0;
