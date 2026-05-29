@@ -1,0 +1,11 @@
+CMake Warning at /home/karan-gandhi/esp/esp-idf/tools/cmake/git_submodules.cmake:52 (message):
+  Git submodule components/openthread/openthread is out of date.  Run 'git
+  submodule update --init --recursive' to fix.
+Call Stack (most recent call first):
+  /home/karan-gandhi/esp/esp-idf/tools/cmake/build.cmake:80 (git_submodule_check)
+  /home/karan-gandhi/esp/esp-idf/tools/cmake/build.cmake:242 (__build_get_idf_git_revision)
+  /home/karan-gandhi/esp/esp-idf/tools/cmake/idf.cmake:52 (__build_init)
+  /home/karan-gandhi/esp/esp-idf/tools/cmake/project.cmake:29 (include)
+  CMakeLists.txt:2 (include)
+
+
