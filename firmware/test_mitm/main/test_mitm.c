@@ -58,6 +58,9 @@
 #include "host/ble_gap.h"
 #include "host/ble_gatt.h"
 #include "host/ble_store.h"
+/* ble_store_config_init() is in the store/config component, not a public header —
+ * declare extern like the vendor bleprph example does. */
+void ble_store_config_init(void);
 #include "services/gap/ble_svc_gap.h"
 #include "services/gatt/ble_svc_gatt.h"
 
@@ -145,7 +148,12 @@ static int gap_event_cb(struct ble_gap_event *event, void *arg)
     case BLE_GAP_EVENT_CONNECT:
         if (event->connect.status == 0) {
             ESP_LOGI(TAG, "Connected (conn %u)", event->connect.conn_handle);
-            ESP_LOGI(TAG, "Now write to characteristic 0xFFF1 in nRF Connect to trigger pairing");
+            /* Proactively initiate security — sends a Security Request PDU to the
+             * central so Android sees the pairing negotiation immediately on connect,
+             * rather than waiting for a failed write to trigger it.
+             * Note: do NOT use a timer here (caused issues in Phase 8). Call directly. */
+            ble_gap_security_initiate(event->connect.conn_handle);
+            ESP_LOGI(TAG, "Security request sent — waiting for passkey action");
         } else {
             ESP_LOGW(TAG, "Connection failed (status %d); re-advertising", event->connect.status);
             advertise();
@@ -167,8 +175,17 @@ static int gap_event_cb(struct ble_gap_event *event, void *arg)
         }
         return 0;
 
+    /* BLE_GAP_EVENT_LINK_ESTAB (33) — new-style connect event used by vendor
+     * bleprph example. Handle alongside BLE_GAP_EVENT_CONNECT for completeness. */
+    case BLE_GAP_EVENT_LINK_ESTAB:
+        if (event->connect.status == 0) {
+            ESP_LOGI(TAG, "LINK_ESTAB: connected (conn %u)", event->connect.conn_handle);
+        }
+        return 0;
+
     case BLE_GAP_EVENT_PASSKEY_ACTION: {
         struct ble_sm_io pkey = {0};
+        ESP_LOGI(TAG, "PASSKEY_ACTION fired — action=%d", event->passkey.params.action);
 
         if (event->passkey.params.action == BLE_SM_IOACT_DISP) {
             /* Peripheral generates passkey → phone user types it in */
@@ -179,15 +196,17 @@ static int gap_event_cb(struct ble_gap_event *event, void *arg)
             ESP_LOGI(TAG, ">>> PASSKEY: %06lu <<< — enter this on the phone",
                      (unsigned long)passkey);
             ESP_LOGI(TAG, "");
-            ble_sm_inject_io(event->passkey.conn_handle, &pkey);
+            int rc = ble_sm_inject_io(event->passkey.conn_handle, &pkey);
+            ESP_LOGI(TAG, "ble_sm_inject_io result: %d", rc);
 
         } else if (event->passkey.params.action == BLE_SM_IOACT_NUMCMP) {
             /* Numeric comparison: auto-accept (shouldn't fire for DISPLAY_ONLY) */
-            ESP_LOGI(TAG, "Numeric comparison %06lu (auto-accepting)",
+            ESP_LOGI(TAG, "Numeric comparison %06lu (auto-accepting — unexpected for DISPLAY_ONLY)",
                      (unsigned long)event->passkey.params.numcmp);
-            pkey.action       = BLE_SM_IOACT_NUMCMP;
+            pkey.action        = BLE_SM_IOACT_NUMCMP;
             pkey.numcmp_accept = 1;
-            ble_sm_inject_io(event->passkey.conn_handle, &pkey);
+            int rc = ble_sm_inject_io(event->passkey.conn_handle, &pkey);
+            ESP_LOGI(TAG, "ble_sm_inject_io result: %d", rc);
 
         } else {
             ESP_LOGW(TAG, "Unexpected passkey action %d", event->passkey.params.action);
@@ -253,14 +272,21 @@ void app_main(void)
     /* NimBLE host initialisation */
     nimble_port_init();
 
-    ble_hs_cfg.sync_cb  = on_sync;
-    ble_hs_cfg.reset_cb = on_reset;
+    ble_hs_cfg.sync_cb        = on_sync;
+    ble_hs_cfg.reset_cb       = on_reset;
+    /* Required: handles bond-store overflow (round-robin eviction).
+     * Without this, NimBLE has no store_status_cb and key storage can fail. */
+    ble_hs_cfg.store_status_cb = ble_store_util_status_rr;
 
-    /* Security Manager configuration — this is the key change vs Just Works */
+    /* Security Manager configuration — diff vs bleprph vendor example */
     ble_hs_cfg.sm_io_cap  = BLE_HS_IO_DISPLAY_ONLY; /* peripheral shows passkey */
     ble_hs_cfg.sm_bonding = 1;                       /* store bond keys in NVS */
     ble_hs_cfg.sm_mitm    = 1;                       /* require MITM protection */
     ble_hs_cfg.sm_sc      = 1;                       /* Secure Connections (Android 16+) */
+    /* Key distribution: tell both sides to exchange LTK for encrypted bonding.
+     * Missing these caused pairing to fail silently — vendor example sets both. */
+    ble_hs_cfg.sm_our_key_dist   |= BLE_SM_PAIR_KEY_DIST_ENC;
+    ble_hs_cfg.sm_their_key_dist |= BLE_SM_PAIR_KEY_DIST_ENC;
 
     /* GATT — register test service */
     ble_svc_gap_init();
@@ -268,6 +294,11 @@ void app_main(void)
     ble_svc_gap_device_name_set(DEVICE_NAME);
     ble_gatts_count_cfg(gatt_svcs);
     ble_gatts_add_svcs(gatt_svcs);
+
+    /* Initialize NVS-backed bond store — required for key persistence.
+     * Without this the bond store backend is not configured and key exchange
+     * during pairing silently fails. Must be called after GATT init. */
+    ble_store_config_init();
 
     /* NimBLE uses its own FreeRTOS task */
     nimble_port_freertos_init(nimble_host_task);
