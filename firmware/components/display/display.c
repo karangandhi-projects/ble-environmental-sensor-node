@@ -28,6 +28,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <inttypes.h>
 
 static const char *TAG = "display";
 static app_runtime_state_t s_state = APP_STATE_BOOT;
@@ -81,6 +82,12 @@ void display_format_humidity(uint16_t humidity_pct_x100, char *buf, uint8_t buf_
 bool display_should_show_sim_badge(uint8_t telemetry_flags)
 {
     return (telemetry_flags & BLE_ENV_FLAG_SIMULATED_DATA) != 0;
+}
+
+void display_format_passkey(uint32_t passkey, char *buf, uint8_t buf_len)
+{
+    if (buf_len < 7) return;
+    snprintf(buf, buf_len, "%06" PRIu32, passkey % 1000000u);
 }
 
 /* ---------- Display power control ---------- */

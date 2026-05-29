@@ -188,3 +188,33 @@ TEST_CASE("display_should_show_sim_badge: 0x01 -> false", "[display][sim_badge]"
     /* 0x01 = BLE_ENV_FLAG_SENSOR_VALID only; simulated bit (0x02) not set */
     TEST_ASSERT_FALSE(display_should_show_sim_badge(0x01));
 }
+
+/* ===== display_format_passkey ===== */
+
+TEST_CASE("display_format_passkey: zero pads to 6 digits", "[display][passkey]")
+{
+    char buf[8];
+    display_format_passkey(42891, buf, sizeof(buf));
+    TEST_ASSERT_EQUAL_STRING("042891", buf);
+}
+
+TEST_CASE("display_format_passkey: 0 -> '000000'", "[display][passkey]")
+{
+    char buf[8];
+    display_format_passkey(0, buf, sizeof(buf));
+    TEST_ASSERT_EQUAL_STRING("000000", buf);
+}
+
+TEST_CASE("display_format_passkey: max passkey '999999'", "[display][passkey]")
+{
+    char buf[8];
+    display_format_passkey(999999, buf, sizeof(buf));
+    TEST_ASSERT_EQUAL_STRING("999999", buf);
+}
+
+TEST_CASE("display_format_passkey: clamps value > 999999 via modulo", "[display][passkey]")
+{
+    char buf[8];
+    display_format_passkey(1234567, buf, sizeof(buf));
+    TEST_ASSERT_EQUAL_STRING("234567", buf);
+}

@@ -67,3 +67,8 @@ void display_format_humidity(uint16_t humidity_pct_x100, char *buf, uint8_t buf_
 
 /* Return true if the SIM badge should be shown. */
 bool display_should_show_sim_badge(uint8_t telemetry_flags);
+
+/* Format passkey as a zero-padded 6-digit ASCII string.
+ * passkey is clamped to [0, 999999] via modulo.
+ * buf must be >= 7 bytes (6 digits + null terminator). */
+void display_format_passkey(uint32_t passkey, char *buf, uint8_t buf_len);
