@@ -244,44 +244,34 @@ void display_tick(uint32_t now_ms)
 
     ssd1306_clear();
 
+    /* Main data varies by page. */
+    char buf[10];
     switch (page) {
-        case 0: {
-            /* Page 0 — BLE state */
-            const char *label = display_state_label(state_snap);
-            uint8_t label_len = (uint8_t)strlen(label);
-            uint8_t x = (SSD1306_WIDTH - label_len * FONT_BIG_WIDTH * 2) / 2;
-            uint8_t y = (SSD1306_HEIGHT - FONT_BIG_HEIGHT * 2) / 2;
-            if (x > SSD1306_WIDTH) x = 0;  /* guard against underflow */
-            ssd1306_draw_string(x, y, label, font_big_data, FONT_BIG_WIDTH, FONT_BIG_HEIGHT, 2);
-            break;
-        }
-        case 1: {
-            /* Page 1 — Temperature */
-            char buf[10];
+        case 0:
             display_format_temperature(sample_snap.temperature_c_x100, buf, sizeof(buf));
-            ssd1306_draw_string(0, 12, buf, font_big_data, FONT_BIG_WIDTH, FONT_BIG_HEIGHT, 2);
-            uint8_t flags = sample_snap.simulated ? BLE_ENV_FLAG_SIMULATED_DATA : 0;
-            if (display_should_show_sim_badge(flags)) {
-                uint8_t sx = SSD1306_WIDTH - 3 * FONT_BIG_WIDTH;
-                ssd1306_draw_string(sx, 0, "SIM", font_big_data, FONT_BIG_WIDTH, FONT_BIG_HEIGHT, 1);
-            }
             break;
-        }
-        case 2: {
-            /* Page 2 — Humidity */
-            char buf[10];
+        case 1:
             display_format_humidity(sample_snap.humidity_pct_x100, buf, sizeof(buf));
-            ssd1306_draw_string(0, 12, buf, font_big_data, FONT_BIG_WIDTH, FONT_BIG_HEIGHT, 2);
-            uint8_t flags = sample_snap.simulated ? BLE_ENV_FLAG_SIMULATED_DATA : 0;
-            if (display_should_show_sim_badge(flags)) {
-                uint8_t sx = SSD1306_WIDTH - 3 * FONT_BIG_WIDTH;
-                ssd1306_draw_string(sx, 0, "SIM", font_big_data, FONT_BIG_WIDTH, FONT_BIG_HEIGHT, 1);
-            }
             break;
-        }
+        case 2:
+            display_format_pressure(sample_snap.pressure_pa, buf, sizeof(buf));
+            break;
         default:
             ESP_LOGW(TAG, "Unknown page %u", page);
-            break;
+            ssd1306_flush();
+            return;
+    }
+    ssd1306_draw_string(0, 12, buf, font_big_data, FONT_BIG_WIDTH, FONT_BIG_HEIGHT, 2);
+
+    /* Persistent top-left state badge on every page. */
+    ssd1306_draw_string(0, 0, display_state_label(state_snap),
+                        font_big_data, FONT_BIG_WIDTH, FONT_BIG_HEIGHT, 1);
+
+    /* SIM badge top-right on every page when simulated. */
+    uint8_t flags = sample_snap.simulated ? BLE_ENV_FLAG_SIMULATED_DATA : 0;
+    if (display_should_show_sim_badge(flags)) {
+        uint8_t sx = SSD1306_WIDTH - 3 * FONT_BIG_WIDTH;
+        ssd1306_draw_string(sx, 0, "SIM", font_big_data, FONT_BIG_WIDTH, FONT_BIG_HEIGHT, 1);
     }
 
     ssd1306_flush();
