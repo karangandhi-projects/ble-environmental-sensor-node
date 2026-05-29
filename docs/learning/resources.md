@@ -37,9 +37,9 @@ The firmware structure in this project was directly inspired by these official e
   Shows NimBLE SM configuration (`sm_sc`, `sm_bonding`, `sm_mitm`), repeat-pairing handler, and bond store init.
   https://github.com/espressif/esp-idf/tree/v5.2.3/examples/bluetooth/nimble/bleprph
 
-- **`examples/bluetooth/nimble/gatt_server`** — custom GATT service
-  UUID definition macros (`BLE_UUID128_INIT`), characteristic/descriptor table structure, and `ble_gatts_count_cfg` / `ble_gatts_add_svcs` pattern.
-  https://github.com/espressif/esp-idf/tree/v5.2.3/examples/bluetooth/nimble/gatt_server
+- **`examples/bluetooth/nimble/`** — full NimBLE example directory
+  Contains `gatt_server_service_table`, `gatt_client`, `ble_spp_client`, and others. The `gatt_server_service_table` example shows UUID definition macros (`BLE_UUID128_INIT`), characteristic/descriptor table structure, and `ble_gatts_count_cfg` / `ble_gatts_add_svcs` pattern.
+  https://github.com/espressif/esp-idf/tree/v5.2.3/examples/bluetooth/nimble
 
 - **`examples/storage/nvs_rw_value`** — NVS read/write
   The `nvs_open → nvs_get_u32 → nvs_commit` pattern used in `storage_config.c`.
@@ -70,9 +70,9 @@ The firmware structure in this project was directly inspired by these official e
 - **Bluetooth GATT Characteristics browser** — standard characteristic UUIDs and formats
   https://www.bluetooth.com/specifications/gatt/
 
-- **Martin Woolley's "Bluetooth Low Energy" guide** — clear walkthrough of GATT, ATT, security
-  https://www.bluetooth.com/blog/author/martin-woolley/
-  Start with his "Introduction to Bluetooth Low Energy" and "Bluetooth Security" series.
+- **Bluetooth SIG Developer Blog** — articles on GATT, ATT, security, and BLE architecture by the Bluetooth SIG team
+  https://www.bluetooth.com/blog/a-developers-guide-to-bluetooth/
+  A good entry point; search the site for "GATT", "security", and "BLE data transfer" for deeper articles.
 
 ---
 
@@ -205,5 +205,5 @@ The firmware structure in this project was directly inspired by these official e
 - **"Programming Embedded Systems" — Michael Barr & Anthony Massa** (O'Reilly)
   Good companion for understanding C on bare-metal, memory layout, and interrupt handling.
 
-- **Bluetooth Developer Studio** — GUI for designing GATT profiles; useful for validating UUID layouts before writing code
-  https://www.bluetooth.com/develop-with-bluetooth/developer-resources-and-tools/developer-tools/
+- **Bluetooth Developer Resources** — tools, SDKs, and qualification resources from the Bluetooth SIG
+  https://www.bluetooth.com/develop-with-bluetooth/
