@@ -27,6 +27,7 @@
 #include <stdbool.h>
 #include "app_state.h"
 #include "sensor_provider.h"
+#include "esp_err.h"
 
 typedef enum {
     DISPLAY_POWER_OFF = 0,
@@ -34,8 +35,10 @@ typedef enum {
     DISPLAY_POWER_DIM = 2,
 } display_power_t;
 
-/* Called from app_main once at boot. Inits SSD1306 and starts internal 50ms timer. */
-void display_init(void);
+/* Called from app_main once at boot. Inits SSD1306 and starts internal 50ms timer.
+ * Returns ESP_OK on success, or an I2C error code if the SSD1306 is not reachable.
+ * Failure is non-fatal: the device continues without display. */
+esp_err_t display_init(void);
 
 /* Set display power state. DISPLAYOFF blanks panel (~20 µA), DISPLAYON restores it,
    DIM reduces contrast to minimum. Safe to call from any task or BLE callback. */

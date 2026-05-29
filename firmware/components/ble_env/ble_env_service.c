@@ -163,17 +163,17 @@ static int gatt_access_cb(uint16_t conn_handle, uint16_t attr_handle,
         }
         ble_hs_mbuf_to_flat(ctxt->om, buf, sizeof(buf), NULL);
         switch (buf[0]) {
-            case 0x01:
+            case BLE_ENV_CMD_LED_OFF:
                 app_state_set_led(false);
                 app_state_set_error(APP_ERROR_OK);
                 ESP_LOGI(TAG, "LED off");
                 break;
-            case 0x02:
+            case BLE_ENV_CMD_LED_ON:
                 app_state_set_led(true);
                 app_state_set_error(APP_ERROR_OK);
                 ESP_LOGI(TAG, "LED on");
                 break;
-            case 0x03:
+            case BLE_ENV_CMD_LED_TOGGLE:
                 app_state_toggle_led();
                 app_state_set_error(APP_ERROR_OK);
                 ESP_LOGI(TAG, "LED toggle");
@@ -501,6 +501,13 @@ static void nimble_host_task(void *param)
 
 esp_err_t ble_env_service_init(void)
 {
+    static bool s_initialized = false;
+    if (s_initialized) {
+        ESP_LOGW(TAG, "ble_env_service_init called twice; ignoring");
+        return ESP_ERR_INVALID_STATE;
+    }
+    s_initialized = true;
+
     esp_timer_create_args_t ta = {
         .callback = deep_sleep_timer_cb,
         .arg = NULL,

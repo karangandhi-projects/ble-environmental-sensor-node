@@ -39,6 +39,7 @@
 #include "display.h"
 #include "esp_log.h"
 #include "esp_pm.h"
+#include "esp_task_wdt.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
@@ -55,10 +56,27 @@ static const char *TAG = "app_main";
  */
 static void telemetry_task(void *arg)
 {
+    /* Register with task watchdog: reset every cycle, panic after 30 s of silence.
+     * Catches I2C deadlock (ssd1306_flush), unexpected blocking, or stack corruption.
+     * esp_task_wdt_init() is called here in case the system WDT was not pre-init'd;
+     * ESP_ERR_INVALID_STATE means it was already initialized, which is also fine. */
+    const esp_task_wdt_config_t wdt_cfg = {
+        .timeout_ms    = 30000,
+        .idle_core_mask = 0,
+        .trigger_panic  = true,
+    };
+    esp_err_t wdt_err = esp_task_wdt_init(&wdt_cfg);
+    if (wdt_err == ESP_OK || wdt_err == ESP_ERR_INVALID_STATE) {
+        esp_task_wdt_add(NULL);
+    } else {
+        ESP_LOGW(TAG, "WDT init failed (%s); running without watchdog", esp_err_to_name(wdt_err));
+    }
+
     /* Track previous power mode to detect transitions. */
     static app_power_mode_t prev_mode = POWER_MODE_ACTIVE;
 
     while (true) {
+        esp_task_wdt_reset();
         app_state_t state = app_state_get_snapshot();
         sensor_sample_t sample = sensor_provider_read();
         app_state_set_sensor_valid(sample.valid);
@@ -142,8 +160,12 @@ void app_main(void)
         ESP_LOGW(TAG, "TinyML init failed — ML alerts disabled");
     }
 
-    display_init();
-    ESP_LOGI(TAG, "Display initialized");
+    esp_err_t disp_err = display_init();
+    if (disp_err != ESP_OK) {
+        ESP_LOGE(TAG, "Display init failed (%s); continuing without display", esp_err_to_name(disp_err));
+    } else {
+        ESP_LOGI(TAG, "Display initialized");
+    }
 
     /* Apply persistent display-off preference from NVS config flags. */
     if (cfg.flags & BLE_ENV_CONFIG_FLAG_DISPLAY_OFF) {

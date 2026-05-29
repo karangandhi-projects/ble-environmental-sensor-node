@@ -72,6 +72,9 @@
  *  2-byte payload: [opcode, value]. Writes require an encrypted link.
  *  @{
  */
+#define BLE_ENV_CMD_LED_OFF           0x01  /**< Turn LED off; value byte ignored. */
+#define BLE_ENV_CMD_LED_ON            0x02  /**< Turn LED on; value byte ignored. */
+#define BLE_ENV_CMD_LED_TOGGLE        0x03  /**< Toggle LED state; value byte ignored. */
 #define BLE_ENV_CMD_FORCE_SAMPLE      0x10  /**< Force immediate telemetry sample; value ignored. */
 #define BLE_ENV_CMD_SET_POWER_MODE    0x20  /**< Set power mode; value = BLE_ENV_POWER_MODE_*. */
 #define BLE_ENV_POWER_MODE_ACTIVE     0x00  /**< Full speed; cancel any pending sleep. */

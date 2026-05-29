@@ -128,10 +128,13 @@ static void tick_cb(void *arg)
 
 /* ---------- Public API ---------- */
 
-void display_init(void)
+esp_err_t display_init(void)
 {
     memset(&s_sample, 0, sizeof(s_sample));
-    ssd1306_init();
+    esp_err_t ret = ssd1306_init();
+    if (ret != ESP_OK) {
+        return ret;
+    }
     display_tick(0);
     esp_timer_create_args_t args = {
         .callback = tick_cb,
@@ -140,6 +143,7 @@ void display_init(void)
     };
     esp_timer_create(&args, &s_tick_timer);
     esp_timer_start_periodic(s_tick_timer, 50 * 1000);   /* 50 ms in µs */
+    return ESP_OK;
 }
 
 void display_set_state(app_runtime_state_t state)

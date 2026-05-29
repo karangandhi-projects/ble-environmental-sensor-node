@@ -76,6 +76,22 @@ static void relu(float *x, int n)
 
 ml_result_t tinyml_infer(float temp_c, float humidity_pct, float pressure_hpa)
 {
+    /* --- Input range validation ---
+     * Training ranges: temp [-10, 60]°C, humidity [0, 100]%, pressure [900, 1100] hPa.
+     * Out-of-range inputs still produce a result but accuracy is not guaranteed.
+     * Humidity is clamped (physical bounds); temperature and pressure are not.
+     */
+    if (temp_c < -10.0f || temp_c > 60.0f) {
+        ESP_LOGW(TAG, "temp %.1f°C outside training range [-10, 60]; result may be unreliable", temp_c);
+    }
+    if (humidity_pct < 0.0f || humidity_pct > 100.0f) {
+        ESP_LOGW(TAG, "humidity %.1f%% outside [0, 100]; clamping", humidity_pct);
+        humidity_pct = humidity_pct < 0.0f ? 0.0f : 100.0f;
+    }
+    if (pressure_hpa < 900.0f || pressure_hpa > 1100.0f) {
+        ESP_LOGW(TAG, "pressure %.0f hPa outside training range [900, 1100]; result may be unreliable", pressure_hpa);
+    }
+
     /* --- Normalize inputs to [0,1] ---
      * Ranges match the NORM dict in ml/train_classifier.py. Without this,
      * temperature (range ~70) would dominate humidity (range 100) and pressure
