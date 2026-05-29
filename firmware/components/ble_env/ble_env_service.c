@@ -73,7 +73,7 @@ static const ble_uuid128_t SENSOR_OVERRIDE_UUID = BLE_UUID128_INIT(0x00,0x00,0x0
 static const ble_uuid128_t ML_ALERT_UUID        = BLE_UUID128_INIT(0x00,0x00,0x00,0x6c,0x6a,0x2f,0x7d,0x8b,0x2a,0x4c,0x4a,0x4f,0x07,0x00,0xe0,0xb7);
 
 
-static void encode_telemetry(uint8_t out[16], const sensor_sample_t *sample, uint16_t sequence)
+void encode_telemetry(uint8_t out[16], const sensor_sample_t *sample, uint16_t sequence)
 {
     uint8_t flags = 0;
     if (sample->valid) flags |= BLE_ENV_FLAG_SENSOR_VALID;
@@ -88,7 +88,7 @@ static void encode_telemetry(uint8_t out[16], const sensor_sample_t *sample, uin
     put_le32(&out[12], sample->pressure_pa);
 }
 
-static void encode_status(uint8_t out[6])
+void encode_status(uint8_t out[6])
 {
     app_state_t s = app_state_get_snapshot();
     out[0] = (uint8_t)s.runtime_state;
