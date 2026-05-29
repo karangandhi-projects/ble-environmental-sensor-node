@@ -44,6 +44,20 @@ esp_err_t display_init(void);
    DIM reduces contrast to minimum. Safe to call from any task or BLE callback. */
 void display_set_power(display_power_t power);
 
+/* Passkey display mode.
+ *
+ * display_set_passkey() pauses page rotation and renders:
+ *   Line 1: "PAIR"  (scale 1, centered)
+ *   Line 2: zero-padded 6-digit passkey (scale 2, full width)
+ *
+ * Call from BLE_GAP_EVENT_PASSKEY_ACTION (BLE_SM_IOACT_DISP).
+ * Call display_clear_passkey() from ENC_CHANGE and DISCONNECT to resume
+ * normal page rotation.
+ *
+ * Both functions are thread-safe (protected by the display spinlock). */
+void display_set_passkey(uint32_t passkey);
+void display_clear_passkey(void);
+
 /* Thread-safe setters (called from telemetry_task or app_main). */
 void display_set_state(app_runtime_state_t state);
 void display_set_telemetry(const sensor_sample_t *sample);

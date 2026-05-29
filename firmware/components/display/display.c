@@ -37,6 +37,10 @@ static portMUX_TYPE s_mux = portMUX_INITIALIZER_UNLOCKED;
 static uint8_t s_last_page = 0xFF;   /* forces render on first tick */
 static esp_timer_handle_t s_tick_timer;
 
+#define PASSKEY_PAGE_SENTINEL 0xFFu
+static bool     s_passkey_active = false;
+static uint32_t s_passkey_value  = 0;
+
 /* ---------- Pure-logic helpers ---------- */
 
 uint8_t display_page_for_time(uint32_t now_ms)
@@ -126,6 +130,41 @@ void display_set_power(display_power_t power)
     }
 }
 
+/* ---------- Passkey display helpers ---------- */
+
+static void render_passkey_page(uint32_t passkey)
+{
+    char buf[8];
+    display_format_passkey(passkey, buf, sizeof(buf));
+
+    ssd1306_clear();
+
+    uint8_t px = (SSD1306_WIDTH - 4u * FONT_BIG_WIDTH) / 2u;
+    ssd1306_draw_string(px, 0, "PAIR", font_big_data, FONT_BIG_WIDTH, FONT_BIG_HEIGHT, 1);
+
+    ssd1306_draw_string(0, 12, buf, font_big_data, FONT_BIG_WIDTH, FONT_BIG_HEIGHT, 2);
+
+    ssd1306_flush();
+}
+
+void display_set_passkey(uint32_t passkey)
+{
+    portENTER_CRITICAL(&s_mux);
+    s_passkey_active = true;
+    s_passkey_value  = passkey;
+    s_last_page      = PASSKEY_PAGE_SENTINEL - 1u;
+    portEXIT_CRITICAL(&s_mux);
+}
+
+void display_clear_passkey(void)
+{
+    portENTER_CRITICAL(&s_mux);
+    s_passkey_active = false;
+    s_passkey_value  = 0;
+    s_last_page      = PASSKEY_PAGE_SENTINEL;
+    portEXIT_CRITICAL(&s_mux);
+}
+
 /* ---------- Internal timer callback ---------- */
 
 static void tick_cb(void *arg)
@@ -169,14 +208,27 @@ void display_set_telemetry(const sensor_sample_t *sample)
 
 void display_tick(uint32_t now_ms)
 {
-    /* Snapshot state and sample under critical section. */
+    /* Snapshot all shared state under spinlock. */
     app_runtime_state_t state_snap;
     sensor_sample_t sample_snap;
+    bool     passkey_active;
+    uint32_t passkey_value;
 
     portENTER_CRITICAL(&s_mux);
-    state_snap  = s_state;
-    sample_snap = s_sample;
+    state_snap     = s_state;
+    sample_snap    = s_sample;
+    passkey_active = s_passkey_active;
+    passkey_value  = s_passkey_value;
     portEXIT_CRITICAL(&s_mux);
+
+    /* Passkey mode: pause page rotation, render PAIR + passkey once per change. */
+    if (passkey_active) {
+        if (s_last_page != PASSKEY_PAGE_SENTINEL) {
+            render_passkey_page(passkey_value);
+            s_last_page = PASSKEY_PAGE_SENTINEL;
+        }
+        return;
+    }
 
     uint8_t page = display_page_for_time(now_ms);
 
