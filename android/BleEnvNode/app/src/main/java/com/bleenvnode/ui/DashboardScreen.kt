@@ -27,7 +27,11 @@ fun DashboardScreen(vm: BleViewModel) {
     val deviceState by vm.deviceState.collectAsState()
 
     val connectionLabel = when (val s = deviceState) {
-        is DeviceState.Connected -> if (s.bonded && s.encrypted) "● bonded + encrypted" else "● connected"
+        is DeviceState.Connected -> when {
+            s.pairing               -> "● pairing — check device display for PIN"
+            s.bonded && s.encrypted -> "● bonded + encrypted"
+            else                    -> "● connected"
+        }
         is DeviceState.Scanning  -> "◌ scanning"
         else -> "○ disconnected"
     }

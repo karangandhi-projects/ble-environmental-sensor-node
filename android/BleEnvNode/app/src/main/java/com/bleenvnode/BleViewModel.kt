@@ -104,4 +104,9 @@ class BleViewModel(app: Application) : AndroidViewModel(app) {
 
     fun setLabel(label: String) { _currentLabel.value = label }
     fun clearHistory() { _telemetryHistory.value = emptyList() }
+
+    override fun onCleared() {
+        super.onCleared()
+        repo.unregister()
+    }
 }

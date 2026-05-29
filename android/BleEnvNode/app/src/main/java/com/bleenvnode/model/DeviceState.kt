@@ -20,7 +20,11 @@ sealed class DeviceState {
      *                     for Just Works pairing on first connect; may be false
      *                     briefly on reconnect before encryption is re-established).
      */
-    data class Connected(val bonded: Boolean, val encrypted: Boolean) : DeviceState()
+    data class Connected(
+        val bonded: Boolean,
+        val encrypted: Boolean,
+        val pairing: Boolean = false
+    ) : DeviceState()
 
     /** BLE scan is active — searching for BLE_ENV_NODE advertisement. */
     object Scanning : DeviceState()

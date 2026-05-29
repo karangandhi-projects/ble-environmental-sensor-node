@@ -24,8 +24,12 @@ package com.bleenvnode
 import android.annotation.SuppressLint
 import android.bluetooth.*
 import android.bluetooth.le.*
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.os.Build
+import androidx.core.content.ContextCompat
 import com.bleenvnode.model.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import java.lang.reflect.Method
@@ -55,6 +59,39 @@ class BleRepository(private val context: Context) {
     /* CCCD write queue — Android BLE requires one descriptor write at a time. */
     private val cccdQueue = ArrayDeque<java.util.UUID>()
     private var cccdBusy = false
+
+    private val bondReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (intent.action != BluetoothDevice.ACTION_BOND_STATE_CHANGED) return
+            val state = intent.getIntExtra(BluetoothDevice.EXTRA_BOND_STATE, -1)
+            val current = deviceState.value
+            if (current !is DeviceState.Connected) return
+            when (state) {
+                BluetoothDevice.BOND_BONDING -> {
+                    deviceState.value = current.copy(pairing = true)
+                }
+                BluetoothDevice.BOND_BONDED -> {
+                    deviceState.value = current.copy(bonded = true, encrypted = true, pairing = false)
+                }
+                BluetoothDevice.BOND_NONE -> {
+                    deviceState.value = current.copy(bonded = false, encrypted = false, pairing = false)
+                }
+            }
+        }
+    }
+
+    init {
+        ContextCompat.registerReceiver(
+            context,
+            bondReceiver,
+            IntentFilter(BluetoothDevice.ACTION_BOND_STATE_CHANGED),
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
+    }
+
+    fun unregister() {
+        try { context.unregisterReceiver(bondReceiver) } catch (_: Exception) {}
+    }
 
     private val scanCallback = object : ScanCallback() {
         override fun onScanResult(callbackType: Int, result: ScanResult) {
