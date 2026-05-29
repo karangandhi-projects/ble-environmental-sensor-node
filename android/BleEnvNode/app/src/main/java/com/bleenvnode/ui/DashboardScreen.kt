@@ -25,6 +25,7 @@ fun DashboardScreen(vm: BleViewModel) {
     val telemetry   by vm.telemetry.collectAsState()
     val status      by vm.status.collectAsState()
     val deviceState by vm.deviceState.collectAsState()
+    val canReconnect by vm.canReconnect.collectAsState()
 
     val connectionLabel = when (val s = deviceState) {
         is DeviceState.Connected -> when {
@@ -73,7 +74,13 @@ fun DashboardScreen(vm: BleViewModel) {
         }
 
         Spacer(Modifier.height(16.dp))
-        OutlinedButton(onClick = { vm.disconnect() }) { Text("Disconnect") }
+        val isConnected = deviceState is DeviceState.Connected
+        OutlinedButton(
+            onClick = { if (isConnected) vm.disconnect() else vm.reconnect() },
+            enabled = isConnected || canReconnect
+        ) {
+            Text(if (isConnected) "Disconnect" else "Reconnect")
+        }
         Spacer(Modifier.height(4.dp))
         OutlinedButton(onClick = { vm.forgetDevice() }) { Text("Forget Device (clear bond)") }
     }
