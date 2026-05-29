@@ -74,18 +74,23 @@ Full details in `docs/build_and_flash.md`.
 ## Screenshots
 
 ### nRF Connect — GATT Service
-| Service overview | Characteristics (1–4) | Characteristics (5–7) |
-|---|---|---|
-| ![service](docs/screenshots/nrf_service_overview.jpeg) | ![chars1](docs/screenshots/nrf_characteristics_1.jpeg) | ![chars2](docs/screenshots/nrf_characteristics_2.jpeg) |
+| Scan | Services | Characteristics (top) | Characteristics (bottom) |
+|---|---|---|---|
+| ![scan](docs/screenshots/nrf_connect_scan.jpeg) | ![services](docs/screenshots/nrf_connect_services.jpeg) | ![chars-top](docs/screenshots/nrf_connect_gatt_top.jpeg) | ![chars-bottom](docs/screenshots/nrf_connect_gatt_bottom.jpeg) |
+
+### nRF Connect — Telemetry
+| Telemetry read + notifications enabled |
+|---|
+| ![telemetry](docs/screenshots/nrf_connect_telemetry_notify.jpeg) |
 
 ### Android Companion App
-| Dashboard | Data & Alerts | Config |
+| Dashboard | ML Alerts | Config |
 |---|---|---|
-| ![dashboard](docs/screenshots/app_dashboard.jpeg) | ![data](docs/screenshots/app_data_alerts.jpeg) | ![config](docs/screenshots/app_config.jpeg) |
+| ![dashboard](docs/screenshots/android_app_dashboard.jpeg) | ![alerts](docs/screenshots/android_app_ml_alerts.jpeg) | ![config](docs/screenshots/android_app_config.jpeg) |
 
 | Controls | Sensor Override |
 |---|---|
-| ![controls](docs/screenshots/app_controls.jpeg) | ![sensor](docs/screenshots/app_sensor_override.jpeg) |
+| ![controls](docs/screenshots/android_app_controls.jpeg) | ![sensor](docs/screenshots/android_app_sensor_override.jpeg) |
 
 ---
 
@@ -110,7 +115,9 @@ Full details in `docs/build_and_flash.md`.
 │   ├── requirements.md                # FR-001 to FR-015
 │   ├── screenshots/                   # nRF Connect + Android app screenshots
 │   ├── security_model.md
-│   └── test_plan.md
+│   ├── test_plan.md
+│   ├── ble_packet_capture_notes.md    # HCI snoop log methodology + packet reference
+│   └── RELEASE_NOTES_v1_0_0.md       # v1.0.0 features, limitations, test summary
 ├── firmware/
 │   ├── main/app_main.c                # entry point + telemetry_task
 │   └── components/
@@ -157,7 +164,7 @@ Full details in `docs/build_and_flash.md`.
 | Android app | ✅ Green | `./gradlew assembleDebug` — min SDK 26 |
 | ML model | ✅ Trained | 99.7% accuracy — 1879 samples (1500 synthetic + 379 real) |
 | Unit tests | ✅ Build pass | 8 env_sensor tests + ble_env encode tests |
-| Manual tests | ✅ Verified | Phase 9A/9B/9C confirmed on hardware |
+| Manual tests | ✅ Pass | TC-001–TC-011, TC-D01–TC-D04, TC-SEC-01–TC-SEC-04 — all 19 pass (2026-05-29) |
 
 ---
 
@@ -190,4 +197,4 @@ The project is complete when:
 - Android app connects, pairs, shows live telemetry, and exports labeled CSV
 - TinyML classifies all 5 classes correctly; anomaly fires on uncertain inputs
 - All Unity unit tests build and pass on-target
-- README contains build/flash/test instructions and screenshots ← **you are here**
+- README contains build/flash/test instructions and screenshots ✓

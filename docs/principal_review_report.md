@@ -90,3 +90,14 @@ A second review pass added five locked decisions and refreshed the spec to track
 5. Phase-by-phase human-checkpoint workflow with an approval gate on edits to existing source files.
 
 Docs updated to track these decisions: this file, `design_decisions.md`, `architecture.md`, `requirements.md`, `implementation_plan.md`, `test_plan.md`, `tests/manual_test_matrix.md`, `build_and_flash.md`, `power_budget.md`, `debug_guide.md`, `AGENT_BRIEF.md`, `README.md`. New files added: `CLAUDE.md`, `.claude/settings.json`, per-component `test/` directories, `firmware/test_app/`. `firmware/components/display/` is a header-only skeleton until Phase 1.5 populates the SSD1306 driver and page scheduler. `docs/gatt_profile.md` was deliberately left untouched.
+
+## Final Approval (2026-05-29)
+
+All four "not approved until" gates are now satisfied:
+
+- Build verified on ESP-IDF v5.2.3 for ESP32-C3. Binary: 0x94f00 bytes (58% flash). ✓
+- Manual tests completed. All 19 TC rows marked Pass in `tests/manual_test_matrix.md`. ✓
+- Real hardware behaviour validated across Phases 9A–9C and Phase 10 (GATT v2, Android companion app, TinyML on-device, full BLE test run on 2026-05-29). ✓
+- Security implemented: Just Works pairing + NVS-persisted bond + ATT error 0x05 on unauthenticated writes to Control/Config/Sensor Override. TC-SEC-01–TC-SEC-04 all pass. ✓
+
+**Status: Approved as final portfolio release (v1.0.0).**

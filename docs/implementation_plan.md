@@ -282,7 +282,7 @@ Docs to update:
 - docs/design_decisions.md (sensor selection rationale and failure handling).
 - docs/requirements.md (FR-009 acceptance confirmed).
 
-## Phase 10 — Polish and Release
+## Phase 10 — Polish and Release ✓ DONE (2026-05-29)
 
 Goal: Make project portfolio-quality.
 
