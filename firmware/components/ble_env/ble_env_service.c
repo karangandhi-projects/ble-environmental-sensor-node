@@ -136,16 +136,19 @@ static int gatt_access_cb(uint16_t conn_handle, uint16_t attr_handle,
             uint8_t buf[4];
             uint16_t len = OS_MBUF_PKTLEN(ctxt->om);
             if (len != sizeof(buf)) {
+                ESP_LOGW(TAG, "config write: bad length %u (expected 4)", len);
                 app_state_set_error(APP_ERROR_INVALID_CONFIG);
                 return BLE_ATT_ERR_INVALID_ATTR_VALUE_LEN;
             }
             ble_hs_mbuf_to_flat(ctxt->om, buf, sizeof(buf), NULL);
             uint16_t interval = (uint16_t)buf[2] | ((uint16_t)buf[3] << 8);
             if (app_state_set_report_interval(interval) != ESP_OK) {
+                ESP_LOGW(TAG, "config write: interval %u ms rejected (out of range)", interval);
                 return BLE_ATT_ERR_UNLIKELY;
             }
             storage_config_t cfg = { .version = BLE_ENV_CONFIG_VERSION, .flags = buf[1], .report_interval_ms = interval };
             storage_config_save(&cfg);
+            ESP_LOGI(TAG, "config: interval=%u ms", interval);
             return 0;
         }
     }
@@ -154,35 +157,53 @@ static int gatt_access_cb(uint16_t conn_handle, uint16_t attr_handle,
         uint8_t buf[2];
         uint16_t len = OS_MBUF_PKTLEN(ctxt->om);
         if (len != sizeof(buf)) {
+            ESP_LOGW(TAG, "control write: bad length %u (expected 2)", len);
             app_state_set_error(APP_ERROR_INVALID_COMMAND);
             return BLE_ATT_ERR_INVALID_ATTR_VALUE_LEN;
         }
         ble_hs_mbuf_to_flat(ctxt->om, buf, sizeof(buf), NULL);
         switch (buf[0]) {
-            case 0x01: app_state_set_led(false); app_state_set_error(APP_ERROR_OK); break;
-            case 0x02: app_state_set_led(true);  app_state_set_error(APP_ERROR_OK); break;
-            case 0x03: app_state_toggle_led();   app_state_set_error(APP_ERROR_OK); break;
+            case 0x01:
+                app_state_set_led(false);
+                app_state_set_error(APP_ERROR_OK);
+                ESP_LOGI(TAG, "LED off");
+                break;
+            case 0x02:
+                app_state_set_led(true);
+                app_state_set_error(APP_ERROR_OK);
+                ESP_LOGI(TAG, "LED on");
+                break;
+            case 0x03:
+                app_state_toggle_led();
+                app_state_set_error(APP_ERROR_OK);
+                ESP_LOGI(TAG, "LED toggle");
+                break;
             case BLE_ENV_CMD_FORCE_SAMPLE:
                 app_state_set_force_sample();
                 app_state_set_error(APP_ERROR_OK);
+                ESP_LOGI(TAG, "force sample requested");
                 break;
             case BLE_ENV_CMD_SET_POWER_MODE:
                 switch (buf[1]) {
                     case BLE_ENV_POWER_MODE_ACTIVE:
                         app_state_set_power_mode(POWER_MODE_ACTIVE);
                         app_state_set_error(APP_ERROR_OK);
+                        ESP_LOGI(TAG, "power mode: active");
                         break;
                     case BLE_ENV_POWER_MODE_LIGHT_SLEEP:
                         app_state_set_power_mode(POWER_MODE_LIGHT_SLEEP);
                         app_state_set_error(APP_ERROR_OK);
+                        ESP_LOGI(TAG, "power mode: light sleep");
                         break;
                     case BLE_ENV_POWER_MODE_DEEP_SLEEP:
                         app_state_request_deep_sleep();
                         app_state_set_error(APP_ERROR_OK);
+                        ESP_LOGI(TAG, "power mode: deep sleep");
                         /* Disconnect after 500 ms so the write response completes first. */
                         esp_timer_start_once(s_deep_sleep_timer, 500 * 1000);
                         break;
                     default:
+                        ESP_LOGW(TAG, "unknown power mode 0x%02x", buf[1]);
                         app_state_set_error(APP_ERROR_INVALID_COMMAND);
                         return BLE_ATT_ERR_UNLIKELY;
                 }
@@ -193,23 +214,28 @@ static int gatt_access_cb(uint16_t conn_handle, uint16_t attr_handle,
                         display_set_power(DISPLAY_POWER_OFF);
                         app_state_set_display_on(false);
                         app_state_set_error(APP_ERROR_OK);
+                        ESP_LOGI(TAG, "display off");
                         break;
                     case BLE_ENV_DISPLAY_ON:
                         display_set_power(DISPLAY_POWER_ON);
                         app_state_set_display_on(true);
                         app_state_set_error(APP_ERROR_OK);
+                        ESP_LOGI(TAG, "display on");
                         break;
                     case BLE_ENV_DISPLAY_DIM:
                         display_set_power(DISPLAY_POWER_DIM);
                         app_state_set_display_on(true);
                         app_state_set_error(APP_ERROR_OK);
+                        ESP_LOGI(TAG, "display dim");
                         break;
                     default:
+                        ESP_LOGW(TAG, "unknown display mode 0x%02x", buf[1]);
                         app_state_set_error(APP_ERROR_INVALID_COMMAND);
                         return BLE_ATT_ERR_UNLIKELY;
                 }
                 break;
             default:
+                ESP_LOGW(TAG, "unknown control opcode 0x%02x", buf[0]);
                 app_state_set_error(APP_ERROR_INVALID_COMMAND);
                 return BLE_ATT_ERR_UNLIKELY;
         }
