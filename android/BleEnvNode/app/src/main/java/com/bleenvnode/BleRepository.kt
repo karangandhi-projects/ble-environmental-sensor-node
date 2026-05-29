@@ -45,6 +45,8 @@ class BleRepository(private val context: Context) {
 
     private var gatt: BluetoothGatt? = null
 
+    var lastDevice: BluetoothDevice? = null
+
     val scannedDevices   = MutableStateFlow<List<BluetoothDevice>>(emptyList())
     val deviceState      = MutableStateFlow<DeviceState>(DeviceState.Disconnected)
     val telemetry        = MutableStateFlow<TelemetryData?>(null)
@@ -119,6 +121,7 @@ class BleRepository(private val context: Context) {
     }
 
     fun connect(device: BluetoothDevice) {
+        lastDevice = device
         stopScan()
         gatt = device.connectGatt(context, false, gattCallback, BluetoothDevice.TRANSPORT_LE)
     }
