@@ -7,7 +7,7 @@
  * - Page 1 (2000 ms): Humidity   — persistent state badge top-left, SIM top-right
  * - Page 2 (2000 ms): Pressure   — persistent state badge top-left, SIM top-right
  *
- * A `SIM` badge is drawn on pages 1 and 2 when the telemetry's simulated-data
+ * A `SIM` badge is drawn on all pages when the telemetry's simulated-data
  * flag (BLE_ENV_FLAG_SIMULATED_DATA) is set. Phase 9 real-sensor swap clears
  * this flag automatically — no display code change required.
  *
