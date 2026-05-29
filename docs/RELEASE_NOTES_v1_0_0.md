@@ -32,13 +32,14 @@ This release covers a complete BLE environmental sensor peripheral with companio
 - **TinyML classifier** — on-device 5-class environmental classification
   (comfortable/warm/cold/humid/danger) with anomaly detection; 245-weight pure-C MLP,
   no external ML runtime; ML Alert characteristic notifies on class change
-- **OLED display** — 0.42" SSD1306, three rotating pages (BLE state · temperature ·
-  humidity+pressure), `SIM` badge when data is simulated
-- **Unity on-target tests** — 8 env_sensor tests + ble_env encoder tests, all passing
+- **OLED display** — 0.42" SSD1306, three equal 2 s pages (temperature · humidity ·
+  pressure); persistent BLE-state badge (ADV/CONN/NOTIFY) top-left and `SIM` badge
+  top-right on every page
+- **Unity on-target tests** — 37 tests across display, app_core, env_sensor, ble_env (1 ignored placeholder); run via `python3 firmware/test_app/run_tests.py`
 
 ### Android Companion App (Phase 9B)
 
-- Dashboard: live telemetry with bond/encryption status badge
+- Dashboard: live telemetry with bond/encryption status badge; Disconnect button toggles to Reconnect after first disconnect — tap to reconnect without re-scanning
 - Sensor Override: sliders for temp/humidity/pressure with persistent state
 - Controls: LED / display / power mode / force-sample buttons
 - Config: report interval slider + boot flags
@@ -78,9 +79,6 @@ Key decisions documented in `docs/design_decisions.md`:
   re-pairing after wake on some Android versions.
 - **Single bond slot.** NimBLE is configured for one bonded central. Bonding a second
   phone clears the first bond.
-- **Android 16 pairing behavior.** Some Android 16 builds issue a Security Request
-  immediately on connect; this is handled correctly by the firmware but may show an
-  extra pairing dialog on first connect.
 - **No Device Information Service.** DIS (0x180A) and Battery Service (0x180F) are
   listed as future additions in `docs/gatt_profile.md`.
 
@@ -106,11 +104,11 @@ Android APK: `android/BleEnvNode/app/build/outputs/apk/debug/app-debug.apk`
 
 | Category | Tests | Status |
 |---|---|---|
-| Unity unit tests | env_sensor (8), ble_env encode (4) | Pass — on-target |
+| Unity unit tests | 37 Tests 0 Failures 1 Ignored (display, app_core, env_sensor, ble_env) | Pass — on-target |
 | Manual BLE tests | TC-001–TC-011 | Pass — nRF Connect |
-| Manual display tests | TC-D01–TC-D04 | Pass — physical OLED |
-| Manual security tests | TC-SEC-01–TC-SEC-04 | Pass — nRF Connect |
-| MITM passkey tests | TC-SEC-05–TC-SEC-06 | Pending hardware run |
+| Manual display tests | TC-D01–TC-D06 | Pass — physical OLED |
+| Manual security tests | TC-SEC-01–TC-SEC-06 | Pass — nRF Connect + Android |
+| Android reconnect | TC-AND-01 | Pass — Android 16 |
 
 Full results: `tests/manual_test_matrix.md`
 
