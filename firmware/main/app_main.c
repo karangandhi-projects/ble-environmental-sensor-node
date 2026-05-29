@@ -63,7 +63,7 @@ static void telemetry_task(void *arg)
         sensor_sample_t sample = sensor_provider_read();
         app_state_set_sensor_valid(sample.valid);
         uint16_t seq = app_state_next_sequence();
-        ESP_LOGI(TAG, "sample seq=%u temp=%d.%02dC humidity=%u.%02u%% pressure=%luPa",
+        ESP_LOGD(TAG, "sample seq=%u temp=%d.%02dC humidity=%u.%02u%% pressure=%luPa",
                  seq,
                  sample.temperature_c_x100 / 100,
                  sample.temperature_c_x100 < 0 ? -(sample.temperature_c_x100 % 100) : sample.temperature_c_x100 % 100,

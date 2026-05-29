@@ -484,9 +484,7 @@ esp_err_t ble_env_service_init(void)
 
     nimble_port_init();
     ble_store_config_init();
-    /* nimble_port_init() resets the "NimBLE" ESP log tag to INFO; force it back
-     * to DEBUG so SM-level PDU traces are visible in the monitor output. */
-    esp_log_level_set("NimBLE", ESP_LOG_DEBUG);
+    esp_log_level_set("NimBLE", ESP_LOG_WARN);
     ble_svc_gap_init();
     ble_svc_gatt_init();
     ble_svc_gap_device_name_set(BLE_ENV_DEVICE_NAME);
