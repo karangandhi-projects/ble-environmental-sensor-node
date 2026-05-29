@@ -6,4 +6,5 @@ idf_component_register(
         "test_display_logic.c"
     INCLUDE_DIRS "."
     REQUIRES display unity
+    WHOLE_ARCHIVE
 )

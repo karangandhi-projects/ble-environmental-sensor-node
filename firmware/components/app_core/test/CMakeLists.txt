@@ -5,4 +5,5 @@ idf_component_register(
         "test_power_mode.c"
     INCLUDE_DIRS "."
     REQUIRES app_core unity
+    WHOLE_ARCHIVE
 )

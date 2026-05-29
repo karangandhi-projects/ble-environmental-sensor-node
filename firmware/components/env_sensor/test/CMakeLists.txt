@@ -4,4 +4,5 @@ idf_component_register(
         "test_sensor_override.c"
     INCLUDE_DIRS "."
     REQUIRES env_sensor unity
+    WHOLE_ARCHIVE
 )
