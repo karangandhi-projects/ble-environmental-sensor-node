@@ -1,12 +1,8 @@
-# BLE Environmental Sensor Node — Spec-Driven Embedded Project
+# BLE Environmental Sensor Node
 
-## Purpose
+A fully working BLE peripheral on ESP32-C3 that streams environmental telemetry over a custom GATT profile, drives a 0.42" SSD1306 OLED display, runs on-device TinyML classification, and pairs with a Kotlin/Jetpack Compose Android companion app.
 
-This repository is a complete, self-contained BLE learning project for an embedded engineer. It is written so that either a human developer or an autonomous coding agent can understand what to build without prior conversation context.
-
-The device is a Bluetooth Low Energy peripheral on ESP32-C3 that exposes environmental telemetry and device control over a custom GATT profile, drives a 0.42" SSD1306 OLED, runs on-device TinyML environmental classification, and pairs with a Kotlin/Jetpack Compose Android companion app.
-
-Repository: <https://github.com/karangandhi-projects/ble-environmental-sensor-node> (private).
+Built spec-first: frozen GATT UUIDs, phase-by-phase implementation plan, on-target Unity tests, and a 19-case manual test matrix — all documented so the project can be understood, built, or extended without prior context.
 
 ---
 
@@ -38,10 +34,20 @@ Full details in `docs/build_and_flash.md`.
 
 ## Target Platform
 
-- **MCU:** ESP32-C3
+- **MCU:** ESP32-C3 (RISC-V single-core, 160 MHz)
 - **SDK:** ESP-IDF v5.2.3 + NimBLE BLE host stack
 - **Display:** 0.42" SSD1306 OLED on I2C (SDA=GPIO5, SCL=GPIO6, addr 0x3C, 72×40 visible)
 - **Android app:** Kotlin 1.9 + Jetpack Compose BOM 2024.04, min SDK 26 (Android 8.0)
+
+---
+
+## Hardware Notes
+
+**MCU choice:** The ESP32-C3 was used because it was available and familiar, not because it is the optimal choice for a BLE peripheral. A production-grade device would use the nRF52840 or nRF5340 — purpose-built for BLE with a dedicated radio co-processor, ARM TrustZone security, and significantly lower current draw in sleep. The ESP32-C3 runs at 160 MHz with an active current of ~80 mA, which is high for a coin-cell or battery-constrained application. For a prototype or connected-home device running on USB power, this is fine. See `docs/power_budget.md` for the full analysis.
+
+**Sensor status:** The firmware uses a simulated sensor (with realistic drift) because the physical BME280 was not available during development. The architecture is fully ready for a real sensor — the `env_sensor` component has a swap point, and the `SIM` badge on the OLED and in telemetry flags clears automatically once real data is present.
+
+**Using Sensor Override as a real-sensor stand-in:** If you have a real temperature/humidity/pressure sensor but want to inject readings without wiring it to the ESP32, use the Android companion app's Sensor Override screen. Write actual sensor readings to characteristic `b7e00006` (Sensor Override) via the sliders — the firmware accepts them immediately, clears the `SIM` badge, and uses those values for TinyML classification and telemetry. Writing all-zeros restores the built-in simulation. This means the full firmware stack (TinyML, GATT, OLED, Android app) can be validated with real environmental data without any additional hardware.
 
 ---
 
@@ -59,7 +65,7 @@ Full details in `docs/build_and_flash.md`.
 - **Sensor Override** (b7e00006): inject simulated values via BLE; ±2°C drift for realism
 - **TinyML** (b7e00007): on-device 5-class environmental classifier (comfortable/warm/cold/humid/danger) + anomaly detection, notifies on class change
 - 245-weight pure-C MLP (3→16→8→5), no external ML runtime required
-- Binary: **0x99520 bytes (59% of 1MB flash)**
+- Binary: **0x94f00 bytes (58% of 1MB flash)**
 
 **Android App (Phase 9B):**
 - BLE scan, connect, Just Works pairing
@@ -100,7 +106,10 @@ Full details in `docs/build_and_flash.md`.
 .
 ├── AGENT_BRIEF.md
 ├── CLAUDE.md                          # auto-loaded per-session agent guidance
+├── CONTRIBUTING.md
+├── LICENSE                            # MIT
 ├── README.md
+├── SECURITY.md
 ├── docs/
 │   ├── architecture.md                # system layers, module map, event flows
 │   ├── build_and_flash.md             # full toolchain setup
@@ -140,19 +149,19 @@ Full details in `docs/build_and_flash.md`.
 
 ---
 
-## How to Use This Package
+## Understanding the Project
 
-1. Read `AGENT_BRIEF.md` first.
-2. If you are an agent (Claude Code or similar), read `CLAUDE.md` — per-phase workflow, approval gate, scope-containment preamble.
-3. Read `docs/vision.md` and `docs/requirements.md` for the target product.
-4. Read `docs/gatt_profile.md` before writing any BLE code — UUIDs and byte layouts are frozen.
-5. Follow `docs/implementation_plan.md` phase by phase.
-6. Use `docs/test_plan.md` and `tests/manual_test_matrix.md` to validate each phase.
-7. Keep `docs/design_decisions.md` updated when changing architecture.
+**If you want to understand what was built:** Start with the [Quick Start](#quick-start) to get the firmware running, then `docs/architecture.md` for system design and `docs/gatt_profile.md` for the BLE API.
+
+**If you want to extend or modify it:** Read `docs/design_decisions.md` for the 19 architectural decisions and their rationale, `docs/implementation_plan.md` for the phase structure, and `CONTRIBUTING.md` for development guidelines.
+
+**If you want to validate it:** See `tests/manual_test_matrix.md` (19 test cases, all passing) and `docs/test_plan.md` for the full test strategy.
+
+**If you are an AI coding agent:** Read `AGENT_BRIEF.md` and `CLAUDE.md` first — these define the per-phase workflow, approval gates, and scope constraints.
 
 **Learning resources:**
-- `docs/learning/tinyml_guide.md` — ML concepts + TinyML on embedded from first principles
-- `docs/learning/android_ble_guide.md` — Android BLE API + Jetpack Compose from first principles
+- `docs/learning/tinyml_guide.md` — ML concepts and TinyML on embedded from first principles
+- `docs/learning/android_ble_guide.md` — Android BLE API and Jetpack Compose from first principles
 
 ---
 
@@ -160,7 +169,7 @@ Full details in `docs/build_and_flash.md`.
 
 | Component | Status | Details |
 |-----------|--------|---------|
-| Firmware | ✅ Green | 0x99520 bytes (59% flash) — ESP32-C3 / ESP-IDF v5.2.3 |
+| Firmware | ✅ Green | 0x94f00 bytes (58% flash) — ESP32-C3 / ESP-IDF v5.2.3 |
 | Android app | ✅ Green | `./gradlew assembleDebug` — min SDK 26 |
 | ML model | ✅ Trained | 99.7% accuracy — 1879 samples (1500 synthetic + 379 real) |
 | Unit tests | ✅ Build pass | 8 env_sensor tests + ble_env encode tests |
@@ -168,18 +177,17 @@ Full details in `docs/build_and_flash.md`.
 
 ---
 
-## Build with an Agent
+## Building with an AI Agent
 
-This repo is designed to be executable by Claude Code or any spec-following agent:
+This repo is structured so an AI coding agent (Claude Code or similar) can implement it phase by phase without prior context:
 
-- `CLAUDE.md` is auto-loaded into each session.
-- `docs/implementation_plan.md` defines phases with exit criteria.
-- Multi-agent orchestration is used to parallelize code-gen work; hardware-bound steps stay single-threaded.
-- Sub-agents run under a scope-containment preamble — writes confined to this repository.
-- Edits to existing source files require explicit user approval; new files may be added freely.
+- `AGENT_BRIEF.md` — non-negotiable constraints and build order
+- `CLAUDE.md` — per-session workflow, approval gate, multi-agent orchestration rules
+- `docs/implementation_plan.md` — phases with explicit exit criteria
+- Edits to existing source files require explicit user approval; new files may be added freely
 
-**Scope-containment preamble for sub-agents (copy verbatim into agent prompts):**
-> You may only write to files inside `/home/karan-gandhi/ble_skill_project_package_reviewed/`. You may READ from `~/esp/esp-idf/` for ESP-IDF headers/examples, but never write there. Do not touch any other path. Do not invoke `gh`, `git push`, `git remote add`, `idf.py flash`, or `idf.py monitor`.
+**Scope-containment preamble for sub-agents (copy into agent prompts):**
+> You may only write to files inside the repository root. You may READ from `~/esp/esp-idf/` for ESP-IDF headers and examples, but never write there. Do not touch any other path. Do not invoke `gh`, `git push`, `git remote add`, `idf.py flash`, or `idf.py monitor` — those are reserved for the human operator.
 
 ---
 

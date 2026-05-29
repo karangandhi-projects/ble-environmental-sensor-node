@@ -1,16 +1,19 @@
 # Release Notes — v1.0.0
 
-**Date:** 2026-05-28
+**Date:** 2026-05-29
 **Hardware:** ESP32-C3 (tested on ESP32-C3-DevKitM-1)
 **Firmware:** ESP-IDF v5.2.3 + NimBLE BLE host
 **Android app:** min SDK 26 (Android 8.0), tested on Android 16
-**Binary size:** 0x99520 bytes (615 KB) — 59% of 1 MB flash partition
+**Binary size:** 0x94f00 bytes (601 KB) — 58% of 1 MB flash partition
+**License:** MIT
+
+This is the first stable release. No prior versions.
 
 ---
 
 ## What's in v1.0.0
 
-This is the initial portfolio-complete release of the BLE Environmental Sensor Node.
+This release covers a complete BLE environmental sensor peripheral with companion Android app and on-device TinyML classification.
 
 ### Firmware (Phases 0–9C)
 
@@ -105,3 +108,14 @@ Android APK: `android/BleEnvNode/app/build/outputs/apk/debug/app-debug.apk`
 | Manual security tests | TC-SEC-01–TC-SEC-04 | Pass — nRF Connect |
 
 Full results: `tests/manual_test_matrix.md`
+
+---
+
+## Future Work (Out of Scope for v1.0.0)
+
+- Real BME280/BMP280 I2C driver (scaffolding exists in `env_sensor/`)
+- Secure OTA firmware update with image verification
+- Battery Service (0x180F) and Device Information Service (0x180A)
+- Resolvable Private Addresses (RPA) for BLE privacy
+- Production key management and certificate provisioning
+- nRF52840 port for lower power consumption
