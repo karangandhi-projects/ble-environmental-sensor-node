@@ -3,6 +3,8 @@ firmware/build/
 firmware/sdkconfig
 firmware/test_app/build/
 firmware/test_app/sdkconfig
+firmware/test_mitm/build/
+firmware/test_mitm/sdkconfig
 
 # Python
 __pycache__/
