@@ -525,13 +525,16 @@ esp_err_t ble_env_service_init(void)
     ble_gatts_add_svcs(gatt_svcs);
 
     /* Must be set AFTER nimble_port_init(), which resets ble_hs_cfg to defaults. */
-    ble_hs_cfg.sm_io_cap         = BLE_HS_IO_NO_INPUT_OUTPUT;
-    ble_hs_cfg.sm_bonding        = 1;
-    ble_hs_cfg.sm_mitm           = 0;
-    ble_hs_cfg.sm_sc             = 1;   /* Android 16 AuthReq always has SC=1; Legacy path fails immediately */
-    ble_hs_cfg.sm_our_key_dist   = BLE_SM_PAIR_KEY_DIST_ENC;
-    ble_hs_cfg.sm_their_key_dist = BLE_SM_PAIR_KEY_DIST_ENC;
-    ble_hs_cfg.store_status_cb   = ble_store_util_status_rr;
+    ble_hs_cfg.sm_io_cap          = BLE_HS_IO_DISPLAY_ONLY;    /* peripheral shows 6-digit passkey */
+    ble_hs_cfg.sm_bonding         = 1;
+    ble_hs_cfg.sm_mitm            = 1;                          /* require MITM protection */
+    ble_hs_cfg.sm_sc              = 1;                          /* Secure Connections (Android 16+) */
+    /* store_status_cb and key_dist fields are required for passkey pairing to
+     * succeed — missing them causes "Incorrect PIN or passkey" (validated in
+     * firmware/test_mitm Phase A, 2026-05-29). */
+    ble_hs_cfg.store_status_cb    = ble_store_util_status_rr;
+    ble_hs_cfg.sm_our_key_dist   |= BLE_SM_PAIR_KEY_DIST_ENC;
+    ble_hs_cfg.sm_their_key_dist |= BLE_SM_PAIR_KEY_DIST_ENC;
     ble_hs_cfg.sync_cb           = on_sync;
 
     nimble_port_freertos_init(nimble_host_task);
