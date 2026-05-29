@@ -22,7 +22,7 @@ This release covers a complete BLE environmental sensor peripheral with companio
 - **Simulated telemetry** — temperature, humidity, pressure with time-based ±2°C drift
 - **Configurable notification interval** — 500 ms–60 s, default 2 s, persisted in NVS
 - **BLE control** — LED, display power (on/off/dim), power mode (active/light sleep/deep sleep)
-- **BLE pairing** — Just Works, encrypted writes for Control/Config/Sensor Override
+- **BLE pairing** — Just Works + bonding with encrypted writes for Control/Config/Sensor Override. **Security note:** Just Works pairing does not protect against MITM (man-in-the-middle) attacks — any device in range can impersonate the central during the pairing handshake. Suitable for a development prototype; production use should implement passkey-entry or numeric-comparison pairing.
 - **Sensor Override** — inject custom temp/humidity/pressure values via BLE write;
   all-zeros restores simulation
 - **TinyML classifier** — on-device 5-class environmental classification
@@ -44,7 +44,7 @@ This release covers a complete BLE environmental sensor peripheral with companio
 ### ML Pipeline (Phase 9C)
 
 - Synthetic dataset generator: 1500 samples across 5 classes
-- Classifier training: 3→16→8→5 MLP, 99.7% accuracy on 375-sample test set
+- Classifier training: 3→16→8→5 MLP, 99.7% accuracy on 375-sample synthetic test set — validated on synthetic and override-generated data only; real-sensor accuracy will vary until the classifier is retrained on BME280/SHT31 readings
 - Weights quantization: float32 → int8 (optional; float32 deployed in v1.0.0)
 - Embedded weights: `firmware/components/tinyml_inference/include/model_data.h`
 

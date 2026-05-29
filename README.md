@@ -1,6 +1,8 @@
 # BLE Environmental Sensor Node
 
-A fully working BLE peripheral on ESP32-C3 that streams environmental telemetry over a custom GATT profile, drives a 0.42" SSD1306 OLED display, runs on-device TinyML classification, and pairs with a Kotlin/Jetpack Compose Android companion app.
+A fully working BLE peripheral on ESP32-C3 with **simulated and override-injectable environmental telemetry**, a custom GATT profile, a 0.42" SSD1306 OLED display, on-device TinyML classification, and a Kotlin/Jetpack Compose Android companion app.
+
+> **Sensor status:** The current firmware uses a built-in simulation (with realistic ±2°C drift) and a Sensor Override characteristic that lets you inject real sensor readings from the Android app without wiring additional hardware. The `env_sensor` component is architected for a drop-in BME280/SHT31 swap — see [Hardware Notes](#hardware-notes) and [Roadmap](#roadmap).
 
 Built spec-first: frozen GATT UUIDs, phase-by-phase implementation plan, on-target Unity tests, and a 19-case manual test matrix — all documented so the project can be understood, built, or extended without prior context.
 
@@ -60,7 +62,7 @@ Full details in `docs/build_and_flash.md`.
 - Notification-based telemetry at configurable interval (500ms–60s, default 2s)
 - LED, display, and power mode control via BLE writes
 - Persistent configuration through NVS (survives reboot)
-- Just Works BLE pairing + bonding; encrypted writes for Control/Config/Sensor Override
+- Just Works BLE pairing + bonding; encrypted writes for Control/Config/Sensor Override *(note: Just Works provides no MITM protection — suitable for development/prototype use; see [Roadmap](#roadmap) for passkey/numeric-comparison upgrade path)*
 - OLED showing rotating pages: BLE state · temperature · humidity, with `SIM` badge
 - **Sensor Override** (b7e00006): inject simulated values via BLE; ±2°C drift for realism
 - **TinyML** (b7e00007): on-device 5-class environmental classifier (comfortable/warm/cold/humid/danger) + anomaly detection, notifies on class change
@@ -139,7 +141,7 @@ Full details in `docs/build_and_flash.md`.
 ├── android/BleEnvNode/                # Kotlin/Compose companion app
 ├── ml/                                # Python ML training pipeline
 │   ├── collect_synthetic.py           # generate 1500-sample synthetic baseline
-│   ├── train_classifier.py            # 5-class MLP (99.7% accuracy)
+│   ├── train_classifier.py            # 5-class MLP (99.7% on synthetic test set)
 │   ├── quantize.py                    # int8 quantization + model_data.cc
 │   └── verify_model.py                # smoke-test 5 known vectors
 ├── tests/manual_test_matrix.md        # TC rows with Pass/Not run status
@@ -172,9 +174,9 @@ Full details in `docs/build_and_flash.md`.
 |-----------|--------|---------|
 | Firmware | ✅ Green | 0x94f00 bytes (58% flash) — ESP32-C3 / ESP-IDF v5.2.3 |
 | Android app | ✅ Green | `./gradlew assembleDebug` — min SDK 26 |
-| ML model | ✅ Trained | 99.7% accuracy — 1879 samples (1500 synthetic + 379 real) |
+| ML model | ✅ Trained | 99.7% accuracy on synthetic + override-generated test data (1500 synthetic + 379 override samples) |
 | Unit tests | ✅ Build pass | 8 env_sensor tests + ble_env encode tests |
-| Manual tests | ✅ Pass | TC-001–TC-011, TC-D01–TC-D04, TC-SEC-01–TC-SEC-04 — all 19 pass (2026-05-29) |
+| Manual tests | ✅ Pass | TC-001–TC-012, TC-D01–TC-D04, TC-SEC-01–TC-SEC-04 — all 20 pass (2026-05-29) |
 
 ---
 
@@ -189,6 +191,22 @@ This repo is structured so an AI coding agent (Claude Code or similar) can imple
 
 **Scope-containment preamble for sub-agents (copy into agent prompts):**
 > You may only write to files inside the repository root. You may READ from `~/esp/esp-idf/` for ESP-IDF headers and examples, but never write there. Do not touch any other path. Do not invoke `gh`, `git push`, `git remote add`, `idf.py flash`, or `idf.py monitor` — those are reserved for the human operator.
+
+---
+
+## Roadmap
+
+**Next milestone — v1.2.0: Real sensor integration**
+- Wire BME280 or SHT31 to I2C (SDA=GPIO5, SCL=GPIO6)
+- Implement `sensor_provider_bme280.c` behind the existing `sensor_provider.h` interface — no GATT or Android app changes needed
+- The `SIM` badge on the OLED and in telemetry flags (`BLE_ENV_FLAG_SIMULATED_DATA`) clears automatically once real data flows
+- Retrain the TinyML classifier on real-sensor data to replace the synthetic training set
+
+**Further out**
+- Secure OTA firmware update
+- Battery Service (0x180F) and Device Information Service (0x180A)
+- Passkey-entry or numeric-comparison pairing for MITM protection (replaces Just Works)
+- nRF52840 port for significantly lower power consumption
 
 ---
 

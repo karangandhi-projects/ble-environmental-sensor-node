@@ -13,6 +13,7 @@
 | TC-009 | Disconnect | Advertising restarts | Pass |
 | TC-010 | Write valid config | Interval updates | Pass |
 | TC-011 | Reboot after config | Interval persists | Pass |
+| TC-012 | Config persistence | Config written in TC-010 survives power cycle and loads correctly on boot | Pass |
 | TC-D01 | Boot OLED page A | Page A shows `BOOT` label briefly after power-up | Pass |
 | TC-D02 | OLED state transitions | Page A label tracks BOOT -> ADV -> CONN -> NOTIFY | Pass |
 | TC-D03 | OLED SIM badge | `SIM` badge visible on pages B and C while simulated-data flag is set | Pass |
