@@ -15,12 +15,15 @@
 | TC-011 | Reboot after config | Interval persists | Pass |
 | TC-012 | Config persistence | Config written in TC-010 survives power cycle and loads correctly on boot | Pass |
 | TC-D01 | Boot OLED page A | Page A shows `BOOT` label briefly after power-up | Pass |
-| TC-D02 | OLED state transitions | Page A label tracks BOOT -> ADV -> CONN -> NOTIFY | Pass |
-| TC-D03 | OLED SIM badge | `SIM` badge visible on pages B and C while simulated-data flag is set | Pass |
-| TC-D04 | OLED dwell times | Page A 3000 ms, page B 1500 ms, page C 1500 ms (+/- 200 ms) | Pass |
+| TC-D02 | OLED state badge | State label (ADV/CONN/NOTIFY) appears top-left on every page | Pass |
+| TC-D03 | OLED SIM badge | `SIM` badge visible on all 3 pages while simulated-data flag is set | Pass |
+| TC-D04 | OLED dwell times | Temperature 2000 ms, Humidity 2000 ms, Pressure 2000 ms (+/- 200 ms) | Pass |
 | TC-SEC-01 | Write Control without pairing | ATT error 0x05 (Insufficient Authentication) returned; pairing flow initiated | Pass |
 | TC-SEC-02 | Just Works pairing via nRF Connect Bond | Pairing completes; encryption established; Control write succeeds | Pass |
 | TC-SEC-03 | Disconnect then reconnect (bonded) | Encryption restored without re-pairing; `Encryption established` in serial log | Pass |
 | TC-SEC-04 | Clear bond on central, reconnect | Pairing prompt shown; re-pair succeeds; write succeeds | Pass |
-| TC-SEC-05 | MITM passkey pairing | OLED shows PAIR + 6-digit passkey; Android prompts PIN entry; correct passkey → Encryption established | Not run |
-| TC-SEC-06 | Bond reconnect — no passkey | Disconnect and reconnect bonded device; no PIN dialog; serial shows Encryption established immediately | Not run |
+| TC-SEC-05 | MITM passkey pairing | OLED shows PAIR + 6-digit passkey; Android prompts PIN entry; correct passkey → Encryption established | Pass |
+| TC-SEC-06 | Bond reconnect — no passkey | Disconnect and reconnect bonded device; no PIN dialog; serial shows Encryption established immediately | Pass |
+| TC-D05 | OLED badge on all pages | State badge (ADV/CONN/NOTIFY) appears top-left on temperature, humidity, and pressure pages | Pass |
+| TC-D06 | OLED pressure page | Page 2 shows pressure in hPa format (e.g. `1013hP`) with 2 s dwell | Pass |
+| TC-AND-01 | Android Reconnect button | After disconnect, button label changes to Reconnect (enabled); tap reconnects without scan | Pass |

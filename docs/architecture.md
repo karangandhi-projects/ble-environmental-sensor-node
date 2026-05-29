@@ -146,7 +146,7 @@ Central writes control characteristic
 Initial MVP can use:
 - NimBLE host task managed by ESP-IDF/NimBLE.
 - FreeRTOS task for telemetry (`telemetry_task` in `app_main.c`) — period = `app_state.report_interval_ms` (default 2000 ms).
-- Display tick: either a dedicated FreeRTOS timer firing every 50 ms or a fast inner loop in the telemetry task — decided in Phase 1.5. Calls `display_tick(now_ms)` which advances the page schedule (A=3000 ms, B=1500 ms, C=1500 ms).
+- Display tick: 50 ms FreeRTOS timer calling `display_tick(now_ms)` which advances the page schedule (temperature=2000 ms, humidity=2000 ms, pressure=2000 ms). State badge (BLE runtime state) and SIM badge are drawn on every page; only the main data area changes per page.
 - Shared state protected by simple critical sections (`portMUX_TYPE` in `app_state.c`) or a mutex if needed.
 
 Rules:
@@ -215,8 +215,8 @@ Android companion app added at repository root:
 ```text
 android/BleEnvNode/
 ├── app/src/main/java/com/bleenvnode/
-│   ├── BleRepository.kt     (raw BLE: scan, connect, GATT ops, CCCD write queue)
-│   ├── BleViewModel.kt      (MVVM bridge: StateFlow exposures, command functions)
+│   ├── BleRepository.kt     (raw BLE: scan, connect, GATT ops, CCCD write queue; stores lastDevice for reconnect)
+│   ├── BleViewModel.kt      (MVVM bridge: StateFlow exposures, command functions; canReconnect + reconnect())
 │   ├── GattUuids.kt         (UUID constants for all 7 GATT objects)
 │   ├── MainActivity.kt      (NavHost, Scaffold, bottom NavigationBar)
 │   ├── model/               (TelemetryData, StatusData, DeviceState)

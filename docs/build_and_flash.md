@@ -60,31 +60,54 @@ Flash one of those temporarily and observe `0x3C` in the scan output.
 
 ## Running Unit Tests
 
-On-target Unity tests live alongside each component in a `test/` subdirectory and are driven by the unit-test-app project at `firmware/test_app/`.
+On-target Unity tests live alongside each component in a `test/` subdirectory and are driven by the unit-test-app project at `firmware/test_app/`. Each test component's `CMakeLists.txt` includes `WHOLE_ARCHIVE` so TEST_CASE registrations are not stripped by the linker.
 
-From the repo root:
+### Quick run (non-interactive, from repo root)
+
+Flash the test app once, then collect results with the helper script:
 
 ```bash
 cd firmware/test_app
 idf.py set-target esp32c3
-idf.py build flash monitor
+idf.py build flash
+cd ../..
+python3 firmware/test_app/run_tests.py   # opens /dev/ttyACM0, sends *, captures output
+```
+
+The script opens the port without resetting the device, sends `*` to the Unity menu, and reads output until the summary line appears (30 s timeout). A passing run ends with:
+
+```text
+37 Tests 0 Failures 1 Ignored
+OK
+
+All tests passed.
+```
+
+The 1 Ignored is the Phase 1.5 placeholder test — expected.
+
+### Interactive run
+
+For interactive debugging (run a specific tag, iterate on a failure):
+
+```bash
+cd firmware/test_app && idf.py -p /dev/ttyACM0 flash monitor
 ```
 
 At the Unity menu prompt, type:
 
 - `*` to run every registered test.
-- `[app_core]` (or any other tag in square brackets) to run only the tests with that tag.
+- `[display]` (or any tag in square brackets) to run only that component's tests.
 - A test name to run a single case.
 
-A passing run ends with something like:
+A failure prints the file, line, expected, and actual values. Re-run with the specific `[tag]` to iterate quickly.
 
-```text
------------------------
-12 Tests 0 Failures 0 Ignored
-OK
+### After testing — restore main firmware
+
+The test_app replaces the main firmware on flash. After a test run, reflash the application:
+
+```bash
+cd firmware && idf.py -p /dev/ttyACM0 flash
 ```
-
-A failure prints the file, line, expected, and actual values for the assertion that tripped. Re-run with the specific `[tag]` to iterate quickly.
 
 ## Build Commands
 

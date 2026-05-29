@@ -96,11 +96,33 @@ Check:
 - COM-scan direction is inverted for this 40-row panel. Flip it with the SSD1306 `SET_COM_OUTPUT_DIRECTION` command (`0xC0` vs `0xC8`). The wrong direction maps the visible rows to memory rows the renderer is not writing.
 
 #### Pages don't rotate
-- Verify `display_tick(now_ms)` is actually being called from `app_main.c`. It is normally driven from a 50 ms FreeRTOS timer or from inside the telemetry task with a shorter sleep.
+- Verify `display_tick(now_ms)` is actually being called from `app_main.c`. It is driven from a 50 ms FreeRTOS timer.
 - If a debug print like `"display_tick"` is wired up, confirm it appears in the log at roughly the expected cadence. No prints means the tick path is dead.
+
+#### State badge missing or showing wrong value
+- The state badge (top-left, scale 1) is drawn on every page from `display_state_label(state_snap)`. If it's absent, check that `display_set_state()` is being called from `telemetry_task` on each cycle.
+- If it's frozen on `BOOT` or `ADV`, check that `app_state_set_connected()` is being called in the connect/disconnect GAP events.
 
 #### SIM badge stuck on after wiring a real sensor
 - The badge is bound to the `BLE_ENV_FLAG_SIMULATED_DATA` flag in the telemetry payload, not to any display-local toggle. Confirm the sensor sample path clears that flag once real readings are flowing. If the flag is still set, the display is correctly reporting what telemetry is advertising.
+
+### Bonded Device Re-Pairs on Every Reconnect
+
+**Symptom**: After disconnect + reconnect the OLED shows the PAIR screen and Android prompts for a passkey again, even though the device was already bonded.
+
+**Root cause**: `ble_gap_security_initiate()` was called unconditionally on every `BLE_GAP_EVENT_CONNECT`. Android 16 responds to an unsolicited Security Request from an already-bonded peripheral by initiating a fresh pairing instead of re-encrypting with the stored LTK.
+
+**Fix**: skip `ble_gap_security_initiate()` when the peer is already in the NimBLE bond store. Only call it for fresh/unknown peers:
+
+```c
+struct ble_gap_conn_desc desc;
+ble_gap_conn_find(event->connect.conn_handle, &desc);
+struct ble_store_key_sec key = { .peer_addr = desc.peer_id_addr };
+struct ble_store_value_sec val;
+if (ble_store_read_peer_sec(&key, &val) != 0) {
+    ble_gap_security_initiate(event->connect.conn_handle);
+}
+```
 
 ## Useful Logs
 

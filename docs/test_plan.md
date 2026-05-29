@@ -2,7 +2,7 @@
 
 ## Unit Tests (Unity, on-target)
 
-Pure-logic modules are exercised with ESP-IDF Unity through the firmware/test_app/ unit-test-app project. Each component owns a test/ subdir and is built and flashed via `idf.py -T <comp> build flash monitor`. BLE callbacks and SSD1306 register sequences are intentionally excluded and remain on the manual test matrix.
+Pure-logic modules are exercised with ESP-IDF Unity through the firmware/test_app/ unit-test-app project. Each component's test CMakeLists.txt uses `WHOLE_ARCHIVE` so TEST_CASE registrations are not stripped by the linker. Tests run automatically on boot (`UNITY_BEGIN/unity_run_all_tests/UNITY_END`) and can also be triggered via the interactive menu. Use `python3 firmware/test_app/run_tests.py` from the repo root to collect results non-interactively. BLE callbacks and SSD1306 register sequences are intentionally excluded and remain on the manual test matrix.
 
 ### app_core
 - app_state_init sets defaults.
@@ -24,11 +24,13 @@ Pure-logic modules are exercised with ESP-IDF Unity through the firmware/test_ap
 - ble_env_encode_status produces the documented status payload. [pending — un-pend once Phase 3 exposes the encoder]
 
 ### display
-- display page schedule cycles A=3000 ms, B=1500 ms, C=1500 ms. [pending — un-pend once Phase 1.5 lands]
-- BLE state label maps BOOT/ADV/CONN/NOTIFY correctly. [pending]
-- Temperature formatter renders the latest reading in the expected layout. [pending]
-- Humidity formatter renders the latest reading in the expected layout. [pending]
-- SIM badge is visible on pages B and C iff BLE_ENV_FLAG_SIMULATED_DATA is set. [pending]
+- display page schedule cycles: page 0 = 2000 ms, page 1 = 2000 ms, page 2 = 2000 ms.
+- BLE state label maps BOOT/INIT/ADV/CONN/NOTIFY/ERR correctly.
+- Temperature formatter renders reading as "XX.XC" / "-XX.XC".
+- Humidity formatter renders reading as "XX%".
+- Pressure formatter renders reading as integer hPa with "hP" suffix (e.g. "1013hP"); truncates, does not round.
+- SIM badge is visible on all 3 pages iff BLE_ENV_FLAG_SIMULATED_DATA is set.
+- Passkey formatter zero-pads to 6 digits; clamps via modulo 1000000.
 
 ### ble_env (security — manual only, NimBLE callbacks exempt from Unity TDD)
 - TC-SEC-01: write Control without pairing → ATT error "Insufficient Authentication (0x05)".
@@ -178,35 +180,32 @@ Expected:
 
 ## Display Test Cases
 
-### TC-D01 Boot Page A Label
+### TC-D01 Boot State Badge
 
 Steps:
 1. Power the board with the OLED attached.
-2. Observe page A within the first seconds after boot.
+2. Observe the top-left badge within the first seconds after boot.
 
 Expected:
-- Page A shows the BLE state label `BOOT` briefly before the stack moves on.
+- Top-left badge shows `BOOT` briefly, then `ADV` once advertising starts.
 
-### TC-D02 State Label Transitions
+### TC-D02 State Badge on All Pages
 
 Steps:
-1. Boot the device and observe page A.
-2. Wait for advertising to start.
-3. Connect from a central.
-4. Subscribe to telemetry notifications.
+1. Boot the device and connect from a central, then subscribe to notifications.
+2. Watch all three pages cycle through.
 
 Expected:
-- Page A label transitions correctly across `BOOT` -> `ADV` -> `CONN` -> `NOTIFY` matching the runtime state.
+- State badge appears top-left on every page (temperature, humidity, pressure) tracking `ADV` → `CONN` → `NOTIFY`.
 
 ### TC-D03 SIM Badge
 
 Steps:
 1. Run the firmware with the simulated sensor provider so that telemetry reports BLE_ENV_FLAG_SIMULATED_DATA.
-2. Observe pages B (temperature) and C (humidity).
+2. Observe all three pages.
 
 Expected:
-- A `SIM` indicator is visible on both pages B and C while the simulated-data flag is set.
-- The badge disappears on pages B and C if the flag is cleared.
+- A `SIM` indicator is visible top-right on all three pages while the simulated-data flag is set.
 
 ### TC-D04 Page Dwell Times
 
@@ -214,7 +213,30 @@ Steps:
 1. Use a stopwatch to measure the dwell time of each page across at least three full cycles.
 
 Expected:
-- Page A dwells for 3000 ms.
-- Page B dwells for 1500 ms.
-- Page C dwells for 1500 ms.
+- Temperature page dwells for 2000 ms.
+- Humidity page dwells for 2000 ms.
+- Pressure page dwells for 2000 ms.
 - Tolerance: +/- 200 ms per page.
+
+### TC-D05 Pressure Page
+
+Steps:
+1. Let the device run with simulated telemetry.
+2. Wait for the third page (pressure) to appear.
+
+Expected:
+- Page shows pressure in integer hPa format e.g. `1013hP` in large font (scale 2).
+- State badge and SIM badge still visible at top.
+
+### TC-AND-01 Android Reconnect Button
+
+Steps:
+1. Open the Android app, scan and connect to BLE_ENV_NODE.
+2. Tap Disconnect.
+3. Observe the button.
+4. Tap Reconnect.
+
+Expected:
+- After disconnect button label changes to "Reconnect" (enabled).
+- Tapping Reconnect reconnects without scanning; button reverts to "Disconnect".
+- On fresh install before first connect, button is disabled.

@@ -67,6 +67,8 @@ The last three fields are required — omitting them causes "Incorrect PIN or pa
 
 **Bond persistence**: `CONFIG_BT_NIMBLE_NVS_PERSIST=y`. Bond keys survive device reboot and deep sleep wakeup. The device re-advertises with the same static identity address, so bonded centrals reconnect and restore encryption automatically without re-pairing.
 
+**Bonded reconnect behaviour**: `ble_gap_security_initiate()` is called only when the connecting peer is not already in the bond store (checked via `ble_store_read_peer_sec()`). For bonded peers the Security Request is skipped — Android detects "Insufficient Authentication" on the first CCCD write and re-encrypts using the stored LTK without any passkey prompt. This prevents spurious re-pairing on reconnect (Android 16 would re-pair rather than re-encrypt in response to an unsolicited Security Request from an already-bonded peripheral).
+
 **Re-pairing**: If the central clears its bond (e.g., in nRF Connect settings), the device handles the `BLE_GAP_EVENT_REPEAT_PAIRING` event by deleting the old bond and retrying the pair — standard NimBLE pattern.
 
 **Bond capacity**: up to 3 bonds (`CONFIG_BT_NIMBLE_MAX_BONDS` default). When full, the oldest bond is evicted automatically (`ble_store_util_status_rr`).

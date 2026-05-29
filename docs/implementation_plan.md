@@ -282,6 +282,44 @@ Docs to update:
 - docs/design_decisions.md (sensor selection rationale and failure handling).
 - docs/requirements.md (FR-009 acceptance confirmed).
 
+## Display Refresh + Android Reconnect ✓ DONE (2026-05-29)
+
+Goal: Replace the dedicated BLE-state page with a persistent top-left badge; add pressure as a third data page; fix reconnect UX on Android.
+
+### Firmware — OLED Display
+
+Changes:
+- `display_page_for_time` thresholds updated from 3000/4500 ms → 2000/4000 ms (equal 2 s per page).
+- `display_tick` rewritten: removed dedicated BLE-state page (page 0); all three pages now show main data at y=12 scale=2, BLE state badge top-left at scale-1, SIM badge top-right at scale-1.
+- Pages: 0 = Temperature, 1 = Humidity, 2 = Pressure.
+- `display_format_pressure(uint32_t pressure_pa, char *buf, uint8_t buf_len)` added — integer hPa with "hP" suffix, truncation not rounding.
+- 4 Unity tests added for `display_format_pressure`; 8 `display_page_for_time` boundary tests updated.
+
+### Firmware — Bonded Reconnect Fix
+
+Change: `ble_gap_security_initiate()` in `BLE_GAP_EVENT_CONNECT` is now conditional on the peer not being in the NimBLE bond store. Previously called unconditionally, causing Android 16 to re-pair instead of re-encrypt on every reconnect to a bonded device. Fix uses `ble_store_read_peer_sec()` to check.
+
+### Android — Reconnect Button
+
+Changes in `BleRepository.kt`, `BleViewModel.kt`, `DashboardScreen.kt`:
+- `BleRepository.lastDevice` stores the target of the most recent `connect()` call.
+- `BleViewModel.canReconnect: StateFlow<Boolean>` starts false, latches true after first connect and never resets within a session.
+- `BleViewModel.reconnect()` calls `repo.connect(lastDevice)` directly.
+- `DashboardScreen` Disconnect button replaced with a conditional Disconnect/Reconnect button: enabled when connected or `canReconnect=true`; disabled before first connect.
+
+### Test Infrastructure Fixes
+
+- Added `WHOLE_ARCHIVE` to all four test component `CMakeLists.txt` files — previously 0 tests were registered at runtime because the linker stripped `TEST_CASE` symbols.
+- `test_main.c` updated to call `UNITY_BEGIN/unity_run_all_tests/UNITY_END` on boot (auto-run) before dropping into `unity_run_menu()`.
+- `run_tests.py` rewritten to trigger tests via the Unity menu (`*\r\n`) rather than waiting for auto-run output that arrives before the script attaches.
+
+Exit criteria:
+- [DONE] 37 Tests 0 Failures 1 Ignored on-target.
+- [DONE] `idf.py build` green.
+- [DONE] `./gradlew assembleDebug` green.
+- [DONE] TC-D05, TC-D06, TC-AND-01 verified manually.
+- [DONE] TC-SEC-05, TC-SEC-06 verified (bonded reconnect silent, passkey shown only on fresh pair).
+
 ## Phase 10 — Polish and Release ✓ DONE (2026-05-29)
 
 Goal: Make project portfolio-quality.
