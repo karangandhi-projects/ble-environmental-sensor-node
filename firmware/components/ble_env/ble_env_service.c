@@ -360,10 +360,18 @@ static int gap_event_cb(struct ble_gap_event *event, void *arg)
                 s_conn_handle = event->connect.conn_handle;
                 app_state_set_connected(true);
                 ESP_LOGI(TAG, "Connected");
-                /* Proactively send Security Request so Android shows the pairing
-                 * dialog immediately on connect. Do NOT use a timer — direct call
-                 * proven safe in Phase A (timer was the Phase 8 bug). */
-                ble_gap_security_initiate(event->connect.conn_handle);
+                /* For unbonded peers: proactively send Security Request so the
+                 * pairing dialog appears immediately (no timer — timer was the
+                 * Phase 8 TWDT bug).
+                 * For bonded peers: skip — Android re-encrypts via stored LTK
+                 * automatically when CCCD writes return Insufficient Auth. */
+                struct ble_gap_conn_desc _desc;
+                ble_gap_conn_find(event->connect.conn_handle, &_desc);
+                struct ble_store_key_sec _key = { .peer_addr = _desc.peer_id_addr };
+                struct ble_store_value_sec _val;
+                if (ble_store_read_peer_sec(&_key, &_val) != 0) {
+                    ble_gap_security_initiate(event->connect.conn_handle);
+                }
             } else {
                 ESP_LOGW(TAG, "Connect failed; restarting advertising");
                 advertise();
