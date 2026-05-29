@@ -54,6 +54,9 @@ class BleViewModel(app: Application) : AndroidViewModel(app) {
     private val _deepSleepConfirmPending = MutableStateFlow(false)
     val deepSleepConfirmPending: StateFlow<Boolean> = _deepSleepConfirmPending
 
+    private val _canReconnect = MutableStateFlow(false)
+    val canReconnect: StateFlow<Boolean> = _canReconnect.asStateFlow()
+
     val overrideTempC    = MutableStateFlow(25f)
     val overrideHumPct   = MutableStateFlow(60f)
     val overridePressHpa = MutableStateFlow(1013f)
@@ -70,7 +73,13 @@ class BleViewModel(app: Application) : AndroidViewModel(app) {
 
     fun startScan() = repo.startScan()
     fun stopScan()  = repo.stopScan()
-    fun connect(device: BluetoothDevice) = repo.connect(device)
+    fun connect(device: BluetoothDevice) {
+        _canReconnect.value = true
+        repo.connect(device)
+    }
+    fun reconnect() {
+        repo.lastDevice?.let { repo.connect(it) }
+    }
     fun disconnect() = repo.disconnect()
     fun forgetDevice() = repo.forgetDevice()
 
