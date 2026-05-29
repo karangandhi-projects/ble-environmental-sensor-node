@@ -13,6 +13,9 @@ Read in this order:
 9. `docs/build_and_flash.md`
 10. `docs/test_plan.md`
 
+**Learning resources:**
+- `docs/learning/resources.md` — curated reading list: ESP-IDF examples, NimBLE upstream, TinyML books + courses, Android BLE, FreeRTOS, SSD1306, and code inspiration sources
+
 **Release artefacts (v1.0.0):**
 - `docs/RELEASE_NOTES_v1_0_0.md` — feature list, known limitations, test summary
 - `docs/ble_packet_capture_notes.md` — BLE traffic capture methodology + key packet reference

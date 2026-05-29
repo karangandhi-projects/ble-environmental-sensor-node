@@ -118,6 +118,7 @@ Full details in `docs/build_and_flash.md`.
 │   ├── gatt_profile.md                # FROZEN v2 — 6 characteristics, byte layouts
 │   ├── implementation_plan.md         # phase-by-phase with exit criteria
 │   ├── learning/
+│   │   ├── resources.md               # curated reading list + code inspiration sources
 │   │   ├── tinyml_guide.md            # ML/TinyML from first principles
 │   │   └── android_ble_guide.md       # Android BLE + Compose from first principles
 │   ├── power_budget.md
