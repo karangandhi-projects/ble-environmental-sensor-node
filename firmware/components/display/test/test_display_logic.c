@@ -24,24 +24,24 @@ TEST_CASE("display_page_for_time: 0 ms -> page 0", "[display][page_scheduler]")
     TEST_ASSERT_EQUAL_UINT8(0, display_page_for_time(0));
 }
 
-TEST_CASE("display_page_for_time: 2999 ms -> page 0", "[display][page_scheduler]")
+TEST_CASE("display_page_for_time: 1999 ms -> page 0", "[display][page_scheduler]")
 {
-    TEST_ASSERT_EQUAL_UINT8(0, display_page_for_time(2999));
+    TEST_ASSERT_EQUAL_UINT8(0, display_page_for_time(1999));
 }
 
-TEST_CASE("display_page_for_time: 3000 ms -> page 1", "[display][page_scheduler]")
+TEST_CASE("display_page_for_time: 2000 ms -> page 1", "[display][page_scheduler]")
 {
-    TEST_ASSERT_EQUAL_UINT8(1, display_page_for_time(3000));
+    TEST_ASSERT_EQUAL_UINT8(1, display_page_for_time(2000));
 }
 
-TEST_CASE("display_page_for_time: 4499 ms -> page 1", "[display][page_scheduler]")
+TEST_CASE("display_page_for_time: 3999 ms -> page 1", "[display][page_scheduler]")
 {
-    TEST_ASSERT_EQUAL_UINT8(1, display_page_for_time(4499));
+    TEST_ASSERT_EQUAL_UINT8(1, display_page_for_time(3999));
 }
 
-TEST_CASE("display_page_for_time: 4500 ms -> page 2", "[display][page_scheduler]")
+TEST_CASE("display_page_for_time: 4000 ms -> page 2", "[display][page_scheduler]")
 {
-    TEST_ASSERT_EQUAL_UINT8(2, display_page_for_time(4500));
+    TEST_ASSERT_EQUAL_UINT8(2, display_page_for_time(4000));
 }
 
 TEST_CASE("display_page_for_time: 5999 ms -> page 2", "[display][page_scheduler]")
@@ -56,7 +56,7 @@ TEST_CASE("display_page_for_time: 6000 ms wraps to page 0", "[display][page_sche
 
 TEST_CASE("display_page_for_time: 9500 ms (phase=3500) -> page 1", "[display][page_scheduler]")
 {
-    /* 9500 % 6000 = 3500; 3000 <= 3500 < 4500 => page 1 */
+    /* 9500 % 6000 = 3500; 2000 <= 3500 < 4000 => page 1 */
     TEST_ASSERT_EQUAL_UINT8(1, display_page_for_time(9500));
 }
 
@@ -217,4 +217,34 @@ TEST_CASE("display_format_passkey: clamps value > 999999 via modulo", "[display]
     char buf[8];
     display_format_passkey(1234567, buf, sizeof(buf));
     TEST_ASSERT_EQUAL_STRING("234567", buf);
+}
+
+/* ===== display_format_pressure ===== */
+
+TEST_CASE("display_format_pressure: 101325 Pa -> '1013hP'", "[display][format_pressure]")
+{
+    char buf[16];
+    display_format_pressure(101325, buf, sizeof(buf));
+    TEST_ASSERT_EQUAL_STRING("1013hP", buf);
+}
+
+TEST_CASE("display_format_pressure: 100000 Pa -> '1000hP'", "[display][format_pressure]")
+{
+    char buf[16];
+    display_format_pressure(100000, buf, sizeof(buf));
+    TEST_ASSERT_EQUAL_STRING("1000hP", buf);
+}
+
+TEST_CASE("display_format_pressure: 0 Pa -> '0hP'", "[display][format_pressure]")
+{
+    char buf[16];
+    display_format_pressure(0, buf, sizeof(buf));
+    TEST_ASSERT_EQUAL_STRING("0hP", buf);
+}
+
+TEST_CASE("display_format_pressure: 99950 Pa -> '999hP' (truncates)", "[display][format_pressure]")
+{
+    char buf[16];
+    display_format_pressure(99950, buf, sizeof(buf));
+    TEST_ASSERT_EQUAL_STRING("999hP", buf);
 }
