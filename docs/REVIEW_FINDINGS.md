@@ -9,7 +9,7 @@
 
 ## Session 2026-05-30 — wrap & resume point
 
-**Closed this session (10 items, 7 commits all pushed):**
+**Closed this session (11 items, 8 commits all pushed):**
 
 | Item | Commit | Summary |
 |---|---|---|
@@ -21,6 +21,7 @@
 | A1 | `a3ef354` | Deferred `storage_config_save()` out of `gatt_access_cb` via a dirty-flag mirror of `force_sample` — NVS write now runs in `telemetry_task` after notify. Firmware +304 B; test_app unchanged. |
 | C3 | `3b8acc2` | Reconciled binary size to `0x95cb0`, Unity to 62 / 0 / 1, manual to 24/25 + 1 Obsolete across README / RELEASE_NOTES / build_and_flash.md / tinyml_guide.md / implementation_plan.md. |
 | C4 | `aa79796` | Fixed RELEASE_NOTES DD cross-refs (DD-001/002/003/004/015 all mislabeled), `model_data.h` → `ml_weights.h`, "IRAM" → flash `.rodata`, "20-entry history" → `take(50)`. |
+| C5 | `14aa84a` | requirements.md FR-011 page spec aligned with implementation: {temp, humidity, pressure} @ 2000 ms + persistent state badge. |
 | A7 | — (pending commit) | sensor_provider.c header "±2 hPa" → "±4 hPa" to match code (±400 Pa) and the inline comment. |
 
 **Build state at end of session:** firmware `0x95cb0` (post-A1; was `0x95b80` pre-A1 — last on-target verified), test_app `0x373c0` (unchanged, links green). No on-target re-verify done this session — should re-flash and confirm `62 Tests / 0 Failures / 1 Ignored` plus a Config write (TC-006) and reboot-persistence check (TC-011) to confirm A1 is behaviour-preserving.
@@ -182,7 +183,6 @@ The test's own header comment (lines 5-9) says this is intentional: a TDD **red*
   - Manual matrix: README "19"/"20" vs **25 rows**. Also `TC-SEC-02` (Just Works) and `TC-SEC-05` (MITM) are **both marked Pass** — impossible on one build.
   - Binary size: `0x94f00` vs `0x99520` vs `0x98410` vs actual **`0x95b80`**.
 - **C4 [Med] `RELEASE_NOTES_v1_0_0.md` errors.** Scrambled DD cross-refs (DD-001/002/003/004/015 all mislabeled); "Embedded weights: …/`model_data.h`" (wrong file — it's `ml_weights.h`); "245 weights fit in IRAM" (they're flash `.rodata`); "20-entry history" (code shows `take(50)` in `DataAlertsScreen`); "TC-001–TC-011" (matrix has 012).
-- **C5 [Med] OLED page spec stale.** `requirements.md` FR-011 + `implementation_plan.md:75` say pages {state, temp, humidity} @ 3000/1500/1500 ms; code (`display.c`) = {temp, humidity, pressure} @ 2000/2000/2000 + persistent state badge.
 - **C6 [Low] `architecture.md` half-stale.** Top "Module Layout" shows `display/` as "TBD — Phase 1.5" and 4 components; bottom "Phase 9 Extensions" shows the real 5 components. Merge. Also `design_decisions.md` has DD-014 out of order at the end; README says "DD-001 to DD-019" but DD-020 exists.
 - **C7 [Low] `principal_review_report.md` is itself stale** ("19 TC rows", "Just Works", `0x94f00`) and reads as a rubber stamp. Update or retire.
 

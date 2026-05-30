@@ -84,10 +84,10 @@ Acceptance:
 The device shall drive a 0.42" SSD1306 OLED on I2C (SDA=GPIO5, SCL=GPIO6, addr 0x3C) to surface live runtime status without a connected central.
 
 Acceptance:
-- The display cycles three pages: BLE runtime state, latest temperature, latest humidity.
-- The BLE state page renders one of `BOOT`, `ADV`, `CONN`, `NOTIFY` matching the current runtime state.
-- The temperature and humidity pages show the latest values reported by the telemetry source.
-- A `SIM` indicator is visible on the temperature and humidity pages while the telemetry's simulated-data flag (`BLE_ENV_FLAG_SIMULATED_DATA`) is set.
+- The display cycles three data pages: temperature, humidity, pressure (2000 ms each).
+- A persistent BLE-state badge on every page renders one of `BOOT`, `ADV`, `CONN`, `NOTIFY` matching the current runtime state.
+- Each data page shows the latest value reported by the telemetry source.
+- A `SIM` indicator is visible on every page while the telemetry's simulated-data flag (`BLE_ENV_FLAG_SIMULATED_DATA`) is set.
 - The 72×40 visible region inside the 128×64 controller frame is honoured (X-offset 28).
 
 ### FR-012 Sensor Override — Phase 9A
