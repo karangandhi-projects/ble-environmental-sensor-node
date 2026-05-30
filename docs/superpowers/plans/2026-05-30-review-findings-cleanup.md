@@ -56,7 +56,7 @@ git push
 
 | ID  | Phase | Model  | Item       | Files                                                         | Status | Commit | Notes |
 |-----|-------|--------|------------|---------------------------------------------------------------|--------|--------|-------|
-| T1  | A     | Haiku  | A7         | `firmware/components/env_sensor/sensor_provider.c`            | `- [ ]` | —      |       |
+| T1  | A     | Haiku  | A7         | `firmware/components/env_sensor/sensor_provider.c`            | `- [x]` | `449efdd` | A7 closed |
 | T2  | A     | Haiku  | C5         | `docs/requirements.md`                                        | `- [ ]` | —      |       |
 | T3  | B     | Sonnet | A2         | `README.md`                                                   | `- [ ]` | —      |       |
 | T4  | B     | Sonnet | A3         | `README.md`                                                   | `- [ ]` | —      |       |
