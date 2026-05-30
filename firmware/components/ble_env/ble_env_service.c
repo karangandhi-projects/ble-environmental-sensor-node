@@ -372,10 +372,16 @@ static int gap_event_cb(struct ble_gap_event *event, void *arg)
                  * For bonded peers: skip — Android re-encrypts via stored LTK
                  * automatically when CCCD writes return Insufficient Auth. */
                 struct ble_gap_conn_desc _desc;
-                ble_gap_conn_find(event->connect.conn_handle, &_desc);
-                struct ble_store_key_sec _key = { .peer_addr = _desc.peer_id_addr };
-                struct ble_store_value_sec _val;
-                if (ble_store_read_peer_sec(&_key, &_val) != 0) {
+                int _rc = ble_gap_conn_find(event->connect.conn_handle, &_desc);
+                bool _is_bonded = false;
+                if (_rc == 0) {
+                    struct ble_store_key_sec _key = { .peer_addr = _desc.peer_id_addr };
+                    struct ble_store_value_sec _val;
+                    _is_bonded = (ble_store_read_peer_sec(&_key, &_val) == 0);
+                } else {
+                    ESP_LOGW(TAG, "ble_gap_conn_find rc=%d on fresh CONNECT — assuming unbonded peer", _rc);
+                }
+                if (!_is_bonded) {
                     ble_gap_security_initiate(event->connect.conn_handle);
                 }
             } else {
