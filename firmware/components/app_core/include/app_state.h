@@ -27,6 +27,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include "esp_err.h"
+#include "storage_config.h"
 
 /**
  * @brief Device lifecycle state, shown on the OLED BLE-state page.
@@ -86,6 +87,8 @@ typedef struct {
     bool                deep_sleep_pending; /**< Deep sleep requested, awaiting disconnect. */
     bool                display_on;      /**< OLED on or off.                    */
     bool                force_sample;    /**< One-shot: sample now, skip delay.  */
+    bool                config_save_pending; /**< true if a config write is queued for telemetry_task. */
+    storage_config_t    pending_config;  /**< Config staged for the queued NVS save.  */
 } app_state_t;
 
 /** @brief Initialise state to safe defaults. Call once from app_main(). */
@@ -170,3 +173,21 @@ void app_state_set_force_sample(void);
  * @return true if a force-sample was pending (consume it), false otherwise.
  */
 bool app_state_get_and_clear_force_sample(void);
+
+/**
+ * @brief Queue a deferred NVS config save.
+ *
+ * Copies @p cfg into app_state and sets the pending flag. The telemetry_task
+ * drains the flag via app_state_get_and_clear_pending_config() and performs
+ * the blocking NVS write outside the BLE callback context (AGENT_BRIEF #7,
+ * DD-006, storage_config.h "Write frequency" note).
+ */
+void app_state_request_config_save(const storage_config_t *cfg);
+
+/**
+ * @brief Drain a queued config save, if any.
+ *
+ * @param[out] out Receives the queued config when the function returns true.
+ * @return true if a config save was pending (consume it), false otherwise.
+ */
+bool app_state_get_and_clear_pending_config(storage_config_t *out);

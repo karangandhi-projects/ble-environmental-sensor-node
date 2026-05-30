@@ -151,8 +151,11 @@ static int gatt_access_cb(uint16_t conn_handle, uint16_t attr_handle,
                 return BLE_ATT_ERR_UNLIKELY;
             }
             storage_config_t cfg = { .version = BLE_ENV_CONFIG_VERSION, .flags = buf[1], .report_interval_ms = interval };
-            storage_config_save(&cfg);
-            ESP_LOGI(TAG, "config: interval=%u ms", interval);
+            /* Defer NVS write to telemetry_task — flash writes are blocking
+             * (~tens of ms) and must not run on the NimBLE host task
+             * (AGENT_BRIEF #7, NFR-003, DD-006, storage_config.h header). */
+            app_state_request_config_save(&cfg);
+            ESP_LOGI(TAG, "config: interval=%u ms (NVS save queued)", interval);
             return 0;
         }
     }

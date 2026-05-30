@@ -93,6 +93,19 @@ static void telemetry_task(void *arg)
         display_set_telemetry(&sample);
         ble_env_service_notify_telemetry(&sample, seq);
 
+        /* Drain any deferred config save queued from gatt_access_cb. NVS
+         * writes are blocking (~tens of ms) and would stall the NimBLE
+         * host task if run from the callback (AGENT_BRIEF #7, DD-006).
+         * Runs after notify so the BLE cadence is not delayed by the save. */
+        storage_config_t pending_cfg;
+        if (app_state_get_and_clear_pending_config(&pending_cfg)) {
+            esp_err_t cfg_err = storage_config_save(&pending_cfg);
+            if (cfg_err != ESP_OK) {
+                ESP_LOGW(TAG, "Deferred config save failed: %s", esp_err_to_name(cfg_err));
+                app_state_set_error(APP_ERROR_STORAGE);
+            }
+        }
+
         /* --- TinyML inference ---
          * Convert fixed-point sensor values to float for the MLP.
          * pressure_pa / 100.0f converts Pa to hPa (e.g. 101325 Pa → 1013.25 hPa).

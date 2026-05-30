@@ -34,10 +34,17 @@ Remaining for full closure of this item: push commits to origin (`git push`).
 - **Verification:** firmware builds green at `0x95b80` (comment-only header change, no runtime effect). Grep for `99\.7` in firmware/Android source returns no live results.
 - **Path-a follow-up (optional):** retrain via `train_classifier.py` + `extract_weights.py` to get a fresh accuracy on a fresh held-out test set, fix the saved_model-vs-deployed mismatch surfaced in B1, and update the numbers. This would change deployed weights → ML alert behaviour → needs on-target re-verify. Tracked as a separate open item.
 
+## ✅ A1 — RESOLVED (2026-05-30)
+
+- **Defer NVS write out of BLE callback.** `storage_config_save()` no longer runs inside `gatt_access_cb` (NimBLE host task). Instead the BLE write stages the new config via `app_state_request_config_save()` and `telemetry_task` drains it once per cycle via `app_state_get_and_clear_pending_config()` — same dirty-flag pattern as the existing `force_sample`. Drain runs after `ble_env_service_notify_telemetry()` so the BLE notify cadence is never delayed by an ~tens-of-ms flash write.
+- **Files touched (4):** `app_state.h` (struct fields + 2 prototypes + `#include "storage_config.h"`), `app_state.c` (init + 2 implementations under the existing spinlock), `ble_env_service.c:154` (call swap + ESP_LOGI text + intent comment), `app_main.c` telemetry_task (drain block).
+- **Build verified:** firmware `0x95cb0` (was `0x95b80`, +304 B); test_app `0x373c0` (unchanged). Test_app builds confirm no unit-test breakage from the new fields.
+- **Trade-off (acceptable for MVP):** the synchronous save used to complete before the BLE write response; now it lags by up to one `report_interval_ms` (default 2 s). A power cut inside that window would lose the queued save. If this becomes a real concern, an early drain on disconnect (in `gap_event_cb`) would tighten the window — out of A1's scope.
+- **On-target verify (user TODO):** TC-006 (write report interval) and TC-011 (reboot after config — interval should persist) should still pass; the code path is preserved end-to-end, just deferred. No changes to on-target unit tests required.
+
 ## Remaining punch-list (next-pickup)
 
 Priority order in **Priority order** section. Open items at a glance:
-- **A1** (high, needs source-edit approval) — move `storage_config_save()` out of `gatt_access_cb` to the telemetry task.
 - **B2 path-a follow-up** (optional, high if pursued) — retrain + redeploy; resolve the saved_model-vs-deployed mismatch surfaced in B1.
 - **C3** (med) — reconcile binary size (`0x95b80`), Unity test count (62), manual TC count (25) wherever quoted.
 - **B5** (med) — delete dead autoencoder arrays (`ML_AE_*`, `ML_AE_HIDDEN_SIZE`, `ML_ANOMALY_THRESHOLD`) from `ml_weights.h`; `extract_weights.py` already prepared for this — once the AE block is removed it will naturally stop preserving it.

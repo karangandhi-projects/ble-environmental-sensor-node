@@ -35,6 +35,8 @@ void app_state_init(uint16_t report_interval_ms)
         .deep_sleep_pending = false,
         .display_on = true,
         .force_sample = false,
+        .config_save_pending = false,
+        .pending_config = {0},
     };
     portEXIT_CRITICAL(&s_lock);
 }
@@ -201,4 +203,26 @@ bool app_state_get_and_clear_force_sample(void)
     s_state.force_sample = false;
     portEXIT_CRITICAL(&s_lock);
     return v;
+}
+
+void app_state_request_config_save(const storage_config_t *cfg)
+{
+    if (!cfg) return;
+    portENTER_CRITICAL(&s_lock);
+    s_state.pending_config = *cfg;
+    s_state.config_save_pending = true;
+    portEXIT_CRITICAL(&s_lock);
+}
+
+bool app_state_get_and_clear_pending_config(storage_config_t *out)
+{
+    bool pending;
+    portENTER_CRITICAL(&s_lock);
+    pending = s_state.config_save_pending;
+    if (pending && out) {
+        *out = s_state.pending_config;
+    }
+    s_state.config_save_pending = false;
+    portEXIT_CRITICAL(&s_lock);
+    return pending;
 }
