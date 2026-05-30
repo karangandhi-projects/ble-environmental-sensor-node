@@ -225,8 +225,9 @@ android/BleEnvNode/
 │   └── util/CsvExporter.kt  (labeled telemetry → Downloads CSV)
 └── ml/                      (Python training pipeline)
     ├── collect_synthetic.py  (1500 samples across 5 classes)
-    ├── train_classifier.py   (3→16→8→5 MLP, 99.7% accuracy)
-    ├── quantize.py           (int8 quantization + model_data.cc generation)
+    ├── train_classifier.py   (3→16→8→5 MLP — see ml_weights.h for actual deployed accuracy)
+    ├── extract_weights.py    (Keras SavedModel → C float arrays in ml_weights.h)
+    ├── quantize.py           (int8 quantization → model_data.cc; not consumed by firmware)
     └── verify_model.py       (smoke-test 5 known vectors)
 ```
 

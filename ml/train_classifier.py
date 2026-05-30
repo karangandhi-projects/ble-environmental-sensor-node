@@ -17,14 +17,18 @@ Do NOT use sklearn's LabelEncoder (it sorts alphabetically and would change indi
 
 Outputs:
     models/model.tflite     — float32 TFLite model (for Android MlClassifier, Phase 9B)
-    models/saved_model/     — Keras SavedModel format (for quantize.py, Phase 9C)
+    models/saved_model/     — Keras SavedModel format consumed by extract_weights.py
+                              (and by quantize.py for the unused int8 path)
 
 Usage:
     source .venv/bin/activate
     python3 train_classifier.py
 
-After training, run verify_model.py to smoke-test, then quantize.py to generate
-firmware/components/tinyml_inference/include/ml_weights.h.
+After training, run verify_model.py to smoke-test, then extract_weights.py to
+regenerate the deployed C weights in
+firmware/components/tinyml_inference/include/ml_weights.h. (quantize.py is
+optional — it produces an int8 byte array in model_data.cc for a potential
+future TFLite Micro path; not consumed by the current firmware.)
 """
 import pandas as pd
 import numpy as np

@@ -21,13 +21,19 @@ Remaining for full closure of this item: push commits to origin (`git push`).
 - **C1 source comments (`fa0e802`):** ble_env_service.{c,h} (@par Security + init sequence; corrected "See DD-008" → "See DD-020"), BleRepository.kt (## Security KDoc), DeviceState.kt (@property encrypted), GattUuids.kt (ControlOpcodes block).
 - **Verification:** firmware build green at `0x95b80` (unchanged — pure comments). `grep -rn "[Jj]ust[ -][Ww]orks"` over `firmware/` and `android/` returns no live results. `docs/security_model.md` is now the single source of truth; every other doc either defers to it or carries a stale-banner.
 
+## ✅ B1 — RESOLVED (2026-05-30)
+
+- **Added `ml/extract_weights.py`** — loads `ml/models/saved_model`, extracts the three Dense layers (`sequential/dense{,_1,_2}/kernel|bias`), transposes each kernel to row-major (out_size × in_size) to match `tinyml_inference.c`'s `W[i * in_size + j]` access, and writes the 245 classifier weights into the six `ML_W*` / `ML_b*` arrays in `firmware/components/tinyml_inference/include/ml_weights.h`. The header doc-comment, `#defines`, and the autoencoder block (`ML_AE_*`) are preserved verbatim — those are stable across retrainings, and the AE arrays are dead per DD-019 and tracked separately under B5.
+- **Smoke-tested:** ran the script against `ml/models/saved_model`; it produced a well-formed file with 245 weights regenerated. The output **differs from the deployed `ml_weights.h`** — confirming the B1 hypothesis that the deployed weights and the saved model on disk were out of sync (`saved_model dense/kernel[0,0] = 1.4600533` vs `ML_W1[0] = 1.45603526`). The deployed file was restored — choosing to retrain/redeploy is a separate decision (see B2/B3).
+- **Cross-refs fixed:** `ml/train_classifier.py` docstring no longer claims `quantize.py` writes `ml_weights.h` (it doesn't — it writes `model_data.cc`); `docs/architecture.md` ml/ block now lists `extract_weights.py` alongside the other scripts. `docs/design_decisions.md` DD-018 and `docs/learning/tinyml_guide.md` already referenced the script correctly — they were dangling pointers until this commit.
+
 ## Remaining punch-list (next-pickup)
 
 Priority order in **Priority order** section. Open items at a glance:
-- **B1** (high) — add `ml/extract_weights.py` to make the deployed weights reproducible.
-- **B2 / B3** (high) — reconcile 98.83% vs 99.7% accuracy and propagate the "box-separability ≠ skill" honesty caveat.
+- **B2 / B3** (high) — reconcile 98.83% vs 99.7% accuracy and propagate the "box-separability ≠ skill" honesty caveat. Newly relevant after B1: there's now also a saved_model-vs-deployed mismatch to resolve (retrain + redeploy, or pick which weights are "the" weights).
 - **A1** (high, needs source-edit approval) — move `storage_config_save()` out of `gatt_access_cb` to the telemetry task.
 - **C3** (med) — reconcile binary size (`0x95b80`), Unity test count (62), manual TC count (25) wherever quoted.
+- **B5** (med) — delete dead autoencoder arrays (`ML_AE_*`, `ML_AE_HIDDEN_SIZE`, `ML_ANOMALY_THRESHOLD`) from `ml_weights.h`; `extract_weights.py` already prepared for this — once the AE block is removed it will naturally stop preserving it.
 - **C7 (full)** (low) — beyond the stale-banner already added, decide retire-or-refresh for `docs/principal_review_report.md`.
 - Then the rest of A, B, C, D, E in priority order.
 
