@@ -23,7 +23,7 @@
 | C4 | `aa79796` | Fixed RELEASE_NOTES DD cross-refs (DD-001/002/003/004/015 all mislabeled), `model_data.h` → `ml_weights.h`, "IRAM" → flash `.rodata`, "20-entry history" → `take(50)`. |
 | C5 | `14aa84a` | requirements.md FR-011 page spec aligned with implementation: {temp, humidity, pressure} @ 2000 ms + persistent state badge. |
 | A7 | — (pending commit) | sensor_provider.c header "±2 hPa" → "±4 hPa" to match code (±400 Pa) and the inline comment. |
-| A2 | `<commit-sha>` | README override paragraph corrected — SIM badge stays on (matches sensor_provider.c setting simulated=true for override). |
+| A2 | `baa6403` | README override paragraph corrected — SIM badge stays on (matches sensor_provider.c setting simulated=true for override). |
 
 **Build state at end of session:** firmware `0x95cb0` (post-A1; was `0x95b80` pre-A1 — last on-target verified), test_app `0x373c0` (unchanged, links green). No on-target re-verify done this session — should re-flash and confirm `62 Tests / 0 Failures / 1 Ignored` plus a Config write (TC-006) and reboot-persistence check (TC-011) to confirm A1 is behaviour-preserving.
 
