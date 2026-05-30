@@ -65,7 +65,7 @@ git push
 | T7  | B     | Sonnet | A6         | `firmware/components/app_core/include/app_config.h`, DD-015, power_budget.md | `- [x]` | `294bf6b` | A6 closed |
 | T8  | B     | Sonnet | B5         | `firmware/components/tinyml_inference/include/ml_weights.h`, `ml/extract_weights.py` | `- [x]` | `85571ca` | B5 closed |
 | T9  | B     | Sonnet | C7 (full)  | `docs/principal_review_report.md`                             | `- [x]` | `6a55cb7` | C7 closed |
-| T10 | C     | Opus   | A5         | `ble_env_service.c`, `display.c`, `design_decisions.md`       | `- [ ]` | —      |       |
+| T10 | C     | Opus   | A5         | `ble_env_service.c`, `display.c`, `design_decisions.md`       | `- [x]` | `3a119d9` | A5 closed via DD-021 (Option 1) |
 | T11 | C     | Opus   | B2 path-a (OPTIONAL) | `ml/`, `ml_weights.h`, README, RELEASE_NOTES         | `- [ ]` | —      |       |
 
 **Recommended order:** T1 → T2 in parallel (both Haiku, no file overlap), then T3 → T4 → T5 → T6 → T7 → T8 → T9 (serial; T3 and T4 share README.md so they cannot parallelize), then T10, then T11 if pursued.
