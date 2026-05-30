@@ -63,7 +63,7 @@ git push
 | T5  | B     | Sonnet | C6         | `docs/architecture.md`                                        | `- [x]` | `49d0f0f` | C6 closed |
 | T6  | B     | Sonnet | A4         | `firmware/components/ble_env/ble_env_service.c`               | `- [x]` | `178f180` | A4 closed |
 | T7  | B     | Sonnet | A6         | `firmware/components/app_core/include/app_config.h`, DD-015, power_budget.md | `- [x]` | `294bf6b` | A6 closed |
-| T8  | B     | Sonnet | B5         | `firmware/components/tinyml_inference/include/ml_weights.h`, `ml/extract_weights.py` | `- [ ]` | —      |       |
+| T8  | B     | Sonnet | B5         | `firmware/components/tinyml_inference/include/ml_weights.h`, `ml/extract_weights.py` | `- [x]` | `85571ca` | B5 closed |
 | T9  | B     | Sonnet | C7 (full)  | `docs/principal_review_report.md`                             | `- [ ]` | —      |       |
 | T10 | C     | Opus   | A5         | `ble_env_service.c`, `display.c`, `design_decisions.md`       | `- [ ]` | —      |       |
 | T11 | C     | Opus   | B2 path-a (OPTIONAL) | `ml/`, `ml_weights.h`, README, RELEASE_NOTES         | `- [ ]` | —      |       |
