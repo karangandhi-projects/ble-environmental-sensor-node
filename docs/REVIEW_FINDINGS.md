@@ -24,7 +24,7 @@
 | C5 | `14aa84a` | requirements.md FR-011 page spec aligned with implementation: {temp, humidity, pressure} @ 2000 ms + persistent state badge. |
 | A7 | — (pending commit) | sensor_provider.c header "±2 hPa" → "±4 hPa" to match code (±400 Pa) and the inline comment. |
 | A2 | `baa6403` | README override paragraph corrected — SIM badge stays on (matches sensor_provider.c setting simulated=true for override). |
-| A3 | — | README sensor-status paragraph: default sim is near-constant; realistic drift exists only under override. |
+| A3 | `2ac5825` | README sensor-status paragraph: default sim is near-constant; realistic drift exists only under override. |
 
 **Build state at end of session:** firmware `0x95cb0` (post-A1; was `0x95b80` pre-A1 — last on-target verified), test_app `0x373c0` (unchanged, links green). No on-target re-verify done this session — should re-flash and confirm `62 Tests / 0 Failures / 1 Ignored` plus a Config write (TC-006) and reboot-persistence check (TC-011) to confirm A1 is behaviour-preserving.
 

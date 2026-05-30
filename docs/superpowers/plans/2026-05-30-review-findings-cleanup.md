@@ -59,7 +59,7 @@ git push
 | T1  | A     | Haiku  | A7         | `firmware/components/env_sensor/sensor_provider.c`            | `- [x]` | `449efdd` | A7 closed |
 | T2  | A     | Haiku  | C5         | `docs/requirements.md`                                        | `- [x]` | `d4463cc` | C5 closed |
 | T3  | B     | Sonnet | A2         | `README.md`                                                   | `- [x]` | `baa6403` | A2 closed |
-| T4  | B     | Sonnet | A3         | `README.md`                                                   | `- [ ]` | —      |       |
+| T4  | B     | Sonnet | A3         | `README.md`                                                   | `- [x]` | `2ac5825` | A3 closed |
 | T5  | B     | Sonnet | C6         | `docs/architecture.md`                                        | `- [ ]` | —      |       |
 | T6  | B     | Sonnet | A4         | `firmware/components/ble_env/ble_env_service.c`               | `- [ ]` | —      |       |
 | T7  | B     | Sonnet | A6         | `firmware/components/app_core/include/app_config.h`, DD-015, power_budget.md | `- [ ]` | —      |       |
