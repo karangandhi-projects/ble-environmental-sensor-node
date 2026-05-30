@@ -14,12 +14,10 @@ Scope:
     PRESERVES verbatim (read from the existing ml_weights.h):
         - The top file doc-comment.
         - The #defines (ML_INPUT_SIZE, ML_LAYER1_SIZE, ML_LAYER2_SIZE,
-          ML_OUTPUT_SIZE, ML_AE_HIDDEN_SIZE, ML_ANOMALY_THRESHOLD).
-        - The autoencoder block (ML_AE_We, ML_AE_be, ML_AE_Wd, ML_AE_bd).
-          DD-019 replaced AE-based anomaly detection with confidence
-          thresholding, so these arrays are dead at runtime. They are kept
-          here for now; see docs/REVIEW_FINDINGS.md item B5 for the planned
-          removal.
+          ML_OUTPUT_SIZE).
+        - The autoencoder block was removed in REVIEW_FINDINGS.md B5
+          (DD-019 replaced AE-based anomaly with confidence thresholding);
+          the file now ends after ML_b3.
     UPDATES (only when --accuracy is provided):
         The "/* Classifier: 3-16-8-5 MLP, accuracy X.XXXX */" header line.
 
@@ -64,7 +62,7 @@ LAYER_VAR_NAMES = [
 ARRAY_NAMES = [("ML_W1", "ML_b1"), ("ML_W2", "ML_b2"), ("ML_W3", "ML_b3")]
 
 CLASSIFIER_BLOCK_RE = re.compile(
-    r"/\* --- Classifier weights --- \*/\n.*?(?=/\* --- Autoencoder weights)",
+    r"/\* --- Classifier weights --- \*/\n.*",
     re.DOTALL,
 )
 ACCURACY_LINE_RE = re.compile(
@@ -86,10 +84,11 @@ def fmt_array(name: str, values: list[float]) -> str:
 def render_classifier_block(
     weights: list[tuple[str, list[float]]],
 ) -> str:
-    """Render the entire `/* --- Classifier weights --- */` section,
-    ending with a blank line so the following AE marker sits flush."""
+    """Render the entire `/* --- Classifier weights --- */` section.
+    The file ends after ML_b3 (no trailing blank line to avoid double-blank
+    at EOF now that the autoencoder block has been removed)."""
     arrays = [fmt_array(name, vals) for name, vals in weights]
-    return "/* --- Classifier weights --- */\n" + "\n".join(arrays) + "\n"
+    return "/* --- Classifier weights --- */\n" + "\n".join(arrays)
 
 
 def main() -> int:
@@ -126,7 +125,7 @@ def main() -> int:
     if not out_path.exists():
         sys.exit(
             f"{out_path} does not exist. This script edits in place; the "
-            "skeleton (header, #defines, AE block) is preserved across runs."
+            "skeleton (header, #defines) must already exist."
         )
 
     # Lazy TF import — keeps `--help` fast and avoids paying the TF startup
@@ -158,9 +157,8 @@ def main() -> int:
     new_block = render_classifier_block(flats)
     if not CLASSIFIER_BLOCK_RE.search(text):
         sys.exit(
-            "Could not locate the '/* --- Classifier weights --- */' ... "
-            "'/* --- Autoencoder weights' markers in the existing file. "
-            "Restore the markers and re-run."
+            "Could not locate the '/* --- Classifier weights --- */' marker "
+            "in the existing file. Restore the marker and re-run."
         )
     new_text = CLASSIFIER_BLOCK_RE.sub(new_block, text, count=1)
 
@@ -181,9 +179,6 @@ def main() -> int:
     print(f"Wrote {out_path} ({total} classifier weights regenerated)")
     if args.accuracy is not None:
         print(f"  Updated accuracy header to {args.accuracy:.4f}")
-    print(
-        "  Autoencoder block preserved (REVIEW_FINDINGS.md B5 will delete it)."
-    )
     return 0
 
 

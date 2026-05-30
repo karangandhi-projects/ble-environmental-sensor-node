@@ -28,6 +28,7 @@
 | C6 | `49d0f0f` | architecture.md: single canonical 5-component Module Layout; Phase 9 Extensions subsection collapsed to a pointer up. Stale "display TBD" removed. |
 | A4 | `178f180` | ble_gap_conn_find rc checked; on failure log + fall through to "assume unbonded → initiate pairing". |
 | A6 | `294bf6b` | Deleted BLE_ENV_CONN_* dead constants from app_config.h; DD-015 + power_budget.md updated — we no longer call ble_gap_update_params. |
+| B5 | — | Deleted ML_AE_* arrays + ML_AE_HIDDEN_SIZE + ML_ANOMALY_THRESHOLD from ml_weights.h (DD-019 made them dead). extract_weights.py simplified. |
 
 **Build state at end of session:** firmware `0x95cb0` (post-A1; was `0x95b80` pre-A1 — last on-target verified), test_app `0x373c0` (unchanged, links green). No on-target re-verify done this session — should re-flash and confirm `62 Tests / 0 Failures / 1 Ignored` plus a Config write (TC-006) and reboot-persistence check (TC-011) to confirm A1 is behaviour-preserving.
 
@@ -91,7 +92,7 @@ Numbers everywhere now match the verified state. Current build size **0x95cb0** 
 
 Priority order in **Priority order** section. Open items at a glance:
 - **B2 path-a follow-up** (optional, high if pursued) — retrain + redeploy; resolve the saved_model-vs-deployed mismatch surfaced in B1.
-- **B5** (med) — delete dead autoencoder arrays (`ML_AE_*`, `ML_AE_HIDDEN_SIZE`, `ML_ANOMALY_THRESHOLD`) from `ml_weights.h`; `extract_weights.py` already prepared for this — once the AE block is removed it will naturally stop preserving it.
+- **A5** (low) — inconsistent locking on s_conn_handle / s_ml_alert_subscribed / s_last_page.
 - **A2–A7** (med-low) — small code issues (SIM-badge override docs, default-sim near-constant range, unchecked return, inconsistent locking, dead conn-param constants, drift comment).
 - **C5** (low) — OLED page spec in requirements.md FR-011 still says {state, temp, humidity} @ 3000/1500/1500 ms; code is {temp, humidity, pressure} @ 2000/2000/2000 + persistent state badge.
 - **C7 (full)** (low) — beyond the stale-banner already added, decide retire-or-refresh for `docs/principal_review_report.md`.
@@ -167,7 +168,6 @@ The test's own header comment (lines 5-9) says this is intentional: a TDD **red*
 - **B2 [High] Accuracy numbers disagree.** Deployed `ml_weights.h` header says **98.83%**; README:177 / `tinyml_inference.h:27` / `architecture.md:227` say **99.7%**. The flashed weights predate the cited dataset. **Fix:** reconcile to one number tied to the actual deployed weights.
 - **B3 [High / key lesson] "99.7%" measures box-separability, not skill.** `collect_synthetic.py` draws each class from disjoint uniform boxes; train/test are the same generator, so ~99% is trivial. The "379 real device samples" are human slider entries in the same boxes — not independent data. `RELEASE_NOTES:52` states the caveat correctly; **propagate that honesty everywhere** and stop leading with 99.7%. No real-sensor validation exists.
 - **B4 [Med] Dead ML artifacts presented as pipeline.** `firmware/components/tinyml_inference/model_data.cc` (int8) is **not compiled** (`CMakeLists.txt` lists only `tinyml_inference.c`). `ml/models/model.tflite` "for Android MlClassifier" is **unused** (no TFLite dep in the app — it just displays the device's `b7e00007` notification). `model_quantized.tflite`, `saved_model/` also dead. `verify_model.py` smoke-tests `model.tflite`, not the deployed `ml_weights.h` path. **Fix:** wire up or delete/label "reference only."
-- **B5 [Med] Dead autoencoder arrays in `ml_weights.h`.** `ML_AE_We/be/Wd/bd`, `ML_AE_HIDDEN_SIZE`, `ML_ANOMALY_THRESHOLD` left over from the abandoned approach (DD-019 replaced it). Delete.
 
 ---
 

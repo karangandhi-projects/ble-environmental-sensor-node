@@ -25,15 +25,12 @@
 #pragma once
 
 /* Classifier: 3-16-8-5 MLP, accuracy 0.9883 */
-/* Autoencoder: 3-8-3, comfortable-only, p95 threshold 0.00474350 */
 /* Normalization: temp (-10,60), hum (0,100), press (900,1100) */
 
 #define ML_INPUT_SIZE        3
 #define ML_LAYER1_SIZE       16
 #define ML_LAYER2_SIZE       8
 #define ML_OUTPUT_SIZE       5
-#define ML_AE_HIDDEN_SIZE    8
-#define ML_ANOMALY_THRESHOLD 0.00474350f
 
 /* --- Classifier weights --- */
 static const float ML_W1[48] = {
@@ -297,76 +294,4 @@ static const float ML_b3[5] = {
     0.25265774f,
     -0.14773364f,
     -0.19836208f
-};
-
-/* --- Autoencoder weights (encoder then decoder) --- */
-static const float ML_AE_We[24] = {
-    -0.56502873f,
-    -0.27437767f,
-    0.54726636f,
-    0.34141576f,
-    0.54885942f,
-    0.35121650f,
-    0.25460476f,
-    0.46852940f,
-    -0.45988271f,
-    0.08853717f,
-    -0.01599376f,
-    0.37621680f,
-    -0.37081823f,
-    -0.27431479f,
-    0.62005776f,
-    0.45435950f,
-    0.18054821f,
-    0.06135117f,
-    0.46665144f,
-    -0.61624581f,
-    0.46679005f,
-    0.30685323f,
-    -0.64592373f,
-    0.00766689f
-};
-
-static const float ML_AE_be[8] = {
-    -0.02445923f,
-    -0.16019195f,
-    0.12404606f,
-    0.12752825f,
-    0.16514072f,
-    -0.12314828f,
-    0.02012264f,
-    0.00000000f
-};
-
-static const float ML_AE_Wd[24] = {
-    0.03024844f,
-    -0.18487491f,
-    0.12439255f,
-    -0.01052952f,
-    -0.37097973f,
-    0.12833108f,
-    0.23829649f,
-    -0.22477907f,
-    0.54881811f,
-    0.71164227f,
-    0.22936785f,
-    -0.48391244f,
-    -0.35872862f,
-    0.33115047f,
-    -0.69629622f,
-    0.69572943f,
-    0.10498879f,
-    -0.02977651f,
-    -0.33871630f,
-    0.52952385f,
-    0.38923454f,
-    0.47154137f,
-    -0.50201106f,
-    -0.16185832f
-};
-
-static const float ML_AE_bd[3] = {
-    -0.12550673f,
-    -0.18319075f,
-    0.06098890f
 };
