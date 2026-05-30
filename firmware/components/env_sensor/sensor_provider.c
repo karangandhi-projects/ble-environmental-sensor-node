@@ -9,7 +9,7 @@
  * is deterministic and repeatable, useful for unit testing and demos.
  *
  * @par Override mode (activated by BLE write to b7e00006)
- * Returns the set values plus a ±2°C / ±2% / ±2 hPa drift that cycles
+ * Returns the set values plus a ±2°C / ±2% / ±4 hPa drift that cycles
  * every 5 seconds. The drift is deliberately larger than real sensor noise
  * (BME280 is ±0.5°C) to produce training data that covers the class region
  * rather than a single point. See DD-017 in design_decisions.md.

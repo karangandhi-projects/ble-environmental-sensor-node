@@ -21,6 +21,7 @@
 | A1 | `a3ef354` | Deferred `storage_config_save()` out of `gatt_access_cb` via a dirty-flag mirror of `force_sample` — NVS write now runs in `telemetry_task` after notify. Firmware +304 B; test_app unchanged. |
 | C3 | `3b8acc2` | Reconciled binary size to `0x95cb0`, Unity to 62 / 0 / 1, manual to 24/25 + 1 Obsolete across README / RELEASE_NOTES / build_and_flash.md / tinyml_guide.md / implementation_plan.md. |
 | C4 | `aa79796` | Fixed RELEASE_NOTES DD cross-refs (DD-001/002/003/004/015 all mislabeled), `model_data.h` → `ml_weights.h`, "IRAM" → flash `.rodata`, "20-entry history" → `take(50)`. |
+| A7 | — (pending commit) | sensor_provider.c header "±2 hPa" → "±4 hPa" to match code (±400 Pa) and the inline comment. |
 
 **Build state at end of session:** firmware `0x95cb0` (post-A1; was `0x95b80` pre-A1 — last on-target verified), test_app `0x373c0` (unchanged, links green). No on-target re-verify done this session — should re-flash and confirm `62 Tests / 0 Failures / 1 Ignored` plus a Config write (TC-006) and reboot-persistence check (TC-011) to confirm A1 is behaviour-preserving.
 
@@ -156,7 +157,6 @@ The test's own header comment (lines 5-9) says this is intentional: a TDD **red*
 - **A4 [Low] Unchecked return.** `ble_env_service.c:369` ignores `ble_gap_conn_find()` return (uninitialized `_desc` on failure).
 - **A5 [Low] Inconsistent locking.** `s_conn_handle`/`s_ml_alert_subscribed` (ble_env_service.c) and `s_last_page` in `display.c:129` (`display_set_power`, no `s_mux`) are shared across tasks without the spinlock used elsewhere. Benign on single-core C3.
 - **A6 [Low] Documented BLE conn-param tuning not in code.** DD-015 / `power_budget.md:116` claim a 500–1000 ms connection-interval request on every connect, but `ble_gap_update_params()` was removed during pairing debug (phase8 attempt 9); `BLE_ENV_CONN_ITVL_*`/`CONN_LATENCY`/`CONN_SUPERVISION` in `app_config.h:65-68` are **dead constants**. **Fix:** re-add (after ENC_CHANGE) or delete + update docs.
-- **A7 [Low] Self-contradictory drift comment.** `sensor_provider.c` header says "±2 hPa" (line 14), inline says "±4 hPa (±400 Pa)" (line 61); code does ±400 Pa.
 
 ---
 
