@@ -16,9 +16,10 @@ sealed class DeviceState {
      * have been discovered.
      *
      * @property bonded    true if the device's bond state is BOND_BONDED.
-     * @property encrypted true if the link is currently encrypted (same as bonded
-     *                     for Just Works pairing on first connect; may be false
-     *                     briefly on reconnect before encryption is re-established).
+     * @property encrypted true if the link is currently encrypted (latches true
+     *                     once MITM Passkey pairing completes; may be false briefly
+     *                     on reconnect before encryption is re-established from
+     *                     the stored LTK).
      */
     data class Connected(
         val bonded: Boolean,

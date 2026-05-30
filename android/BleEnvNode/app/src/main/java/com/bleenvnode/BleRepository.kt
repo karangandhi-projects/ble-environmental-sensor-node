@@ -13,9 +13,11 @@
  * next write. See [android_ble_guide.md] for a detailed explanation.
  *
  * ## Security
- * The firmware uses Just Works BLE pairing (BLE_HS_IO_NO_INPUT_OUTPUT). Writes to
- * b7e00003/b7e00004/b7e00006 on an unencrypted link return ATT error 0x05, which
- * triggers Android to initiate pairing automatically.
+ * The firmware uses MITM Passkey Display pairing (BLE_HS_IO_DISPLAY_ONLY,
+ * sm_mitm=1, sm_sc=1). Writes to b7e00003/b7e00004/b7e00006 on an unencrypted
+ * link return ATT error 0x05, which triggers Android to initiate pairing; the
+ * device's OLED shows a 6-digit passkey and Android prompts the user to type it.
+ * See docs/security_model.md for the full SM config.
  *
  * @see BleViewModel for the MVVM bridge between this class and the Compose UI.
  */

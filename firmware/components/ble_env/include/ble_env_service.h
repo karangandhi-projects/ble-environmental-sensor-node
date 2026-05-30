@@ -20,10 +20,12 @@
  * than "Unknown Characteristic".
  *
  * @par Security model
- * Control writes and Configuration reads/writes require an encrypted link.
- * The BLE stack returns ATT error 0x05 (Insufficient Authentication) if an
- * unencrypted central attempts these operations, which triggers Just Works
- * pairing on the central side. See docs/security_model.md.
+ * Control writes, Configuration reads/writes, and Sensor Override writes require
+ * an encrypted link. The BLE stack returns ATT error 0x05 (Insufficient
+ * Authentication) if an unencrypted central attempts these operations, which
+ * triggers MITM Passkey Display pairing on the central side — the OLED shows a
+ * 6-digit passkey and the central prompts the user to type it. See DD-020 and
+ * docs/security_model.md (authoritative).
  *
  * @par Threading
  * All public functions in this header are called from the NimBLE host task
@@ -46,7 +48,8 @@
  * 2. Calls nimble_port_init() to initialise the NimBLE host.
  * 3. Calls ble_store_config_init() to enable NVS-backed bond storage.
  * 4. Registers GAP and GATT services.
- * 5. Configures SM (Security Manager) for Just Works bonding with SC=1.
+ * 5. Configures SM (Security Manager) for MITM Passkey Display bonding
+ *    (BLE_HS_IO_DISPLAY_ONLY, sm_mitm=1, sm_sc=1).
  * 6. Starts the NimBLE host FreeRTOS task.
  * 7. Advertising begins once the NimBLE on_sync callback fires.
  *

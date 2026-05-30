@@ -43,7 +43,8 @@ object GattUuids {
  *
  * All writes require an encrypted BLE link. Unencrypted writes are rejected
  * by the firmware with ATT error 0x05 (Insufficient Authentication), which
- * triggers Just Works pairing on Android.
+ * triggers MITM Passkey Display pairing on Android — the device's OLED shows
+ * a 6-digit passkey for the user to enter.
  */
 object ControlOpcodes {
     const val LED_OFF         = 0x01.toByte() /** Turn LED off; byte 1 ignored. */

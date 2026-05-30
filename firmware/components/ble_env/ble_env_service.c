@@ -22,10 +22,13 @@
  * deep sleep was requested via opcode 0x20/0x02.
  *
  * @par Security
- * Just Works pairing with SC=1 (Secure Connections). Keys persisted in NVS
- * via ble_store_config_init(). ble_store_util_delete_peer() handles
- * re-pairing after a bond is deleted on the central side. See DD-008 and
- * docs/security_model.md.
+ * MITM Passkey Display pairing — BLE_HS_IO_DISPLAY_ONLY + sm_mitm=1 + sm_sc=1
+ * (Secure Connections). The peripheral generates a random 6-digit passkey,
+ * shows it on the OLED, and injects it via ble_sm_inject_io(); the central
+ * prompts the user to type it. Keys persisted in NVS via ble_store_config_init().
+ * ble_store_util_delete_peer() handles re-pairing after a bond is deleted on
+ * the central side. See DD-020 and docs/security_model.md. (DD-008 covers OTA,
+ * not pairing — earlier docstring referenced the wrong DD.)
  *
  * @par Deep sleep coordination
  * Opcode 0x20/0x02 (deep sleep) sets a 500 ms one-shot timer before
