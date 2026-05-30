@@ -42,15 +42,24 @@ Remaining for full closure of this item: push commits to origin (`git push`).
 - **Trade-off (acceptable for MVP):** the synchronous save used to complete before the BLE write response; now it lags by up to one `report_interval_ms` (default 2 s). A power cut inside that window would lose the queued save. If this becomes a real concern, an early drain on disconnect (in `gap_event_cb`) would tighten the window — out of A1's scope.
 - **On-target verify (user TODO):** TC-006 (write report interval) and TC-011 (reboot after config — interval should persist) should still pass; the code path is preserved end-to-end, just deferred. No changes to on-target unit tests required.
 
+## ✅ C3 — RESOLVED (2026-05-30)
+
+Numbers everywhere now match the verified state. Current build size **0x95cb0** (post-A1; 0x95b80 pre-A1), Unity **62 / 0 / 1**, manual **24/25 Pass + 1 Obsolete** after TC-SEC-02 superseded by TC-SEC-05.
+
+- **Binary size** updated in `README.md` (features bullet + status table), `docs/RELEASE_NOTES_v1_0_0.md` header, `docs/learning/tinyml_guide.md` (lesson summary). Historical phase exit sizes in `docs/implementation_plan.md` (Phase 8: 0x97f20, Phase 9A: 0x98410, Phase 9C: 0x99220) left intact as accurate phase-close records.
+- **Unity test count** updated in `README.md` status row, `docs/RELEASE_NOTES_v1_0_0.md` (intro bullet + coverage table), `docs/build_and_flash.md` (sample output). `docs/implementation_plan.md` Phase 10 exit criterion left as "37" *with* an inline correction note pointing at the TEST-COLLISION fix and REVIEW_FINDINGS, since that line is a phase-close record.
+- **Manual TC count and ranges** updated in `README.md` (validate-it line + status row), `docs/RELEASE_NOTES_v1_0_0.md` (TC-001–TC-011 → TC-001–TC-012 — also resolves one of C4's items). TC-SEC-02 now consistently labelled Obsolete (already done in C1 sweep).
+- **`docs/principal_review_report.md`** stale numbers untouched — the top SUPERSEDED banner from C1 already enumerates them; full retire-or-refresh remains under C7.
+
 ## Remaining punch-list (next-pickup)
 
 Priority order in **Priority order** section. Open items at a glance:
 - **B2 path-a follow-up** (optional, high if pursued) — retrain + redeploy; resolve the saved_model-vs-deployed mismatch surfaced in B1.
-- **C3** (med) — reconcile binary size (`0x95b80`), Unity test count (62), manual TC count (25) wherever quoted.
 - **B5** (med) — delete dead autoencoder arrays (`ML_AE_*`, `ML_AE_HIDDEN_SIZE`, `ML_ANOMALY_THRESHOLD`) from `ml_weights.h`; `extract_weights.py` already prepared for this — once the AE block is removed it will naturally stop preserving it.
-- **C4** (med) — `RELEASE_NOTES_v1_0_0.md` other errors (scrambled DD cross-refs, `model_data.h` should be `ml_weights.h`, "245 weights fit in IRAM" is wrong — flash `.rodata`, "20-entry history" should be `take(50)`, "TC-001–TC-011" should be TC-012).
+- **C4 (remaining)** (med) — `RELEASE_NOTES_v1_0_0.md` other errors: scrambled DD cross-refs (DD-001/002/003/004/015 mislabeled), `model_data.h` should be `ml_weights.h`, "245 weights fit in IRAM" is wrong — flash `.rodata`, "20-entry history" should be `take(50)`. (TC range now fixed.)
+- **A2–A7** (med-low) — small code issues (SIM-badge override docs, default-sim near-constant range, unchecked return, inconsistent locking, dead conn-param constants, drift comment).
 - **C7 (full)** (low) — beyond the stale-banner already added, decide retire-or-refresh for `docs/principal_review_report.md`.
-- Then the rest of A, B, C, D, E in priority order.
+- Then the rest of B, C, D, E in priority order.
 
 ---
 

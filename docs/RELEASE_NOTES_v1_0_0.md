@@ -4,7 +4,7 @@
 **Hardware:** ESP32-C3 (tested on ESP32-C3-DevKitM-1)
 **Firmware:** ESP-IDF v5.2.3 + NimBLE BLE host
 **Android app:** min SDK 26 (Android 8.0), tested on Android 16
-**Binary size:** 0x94f00 bytes (601 KB) — 58% of 1 MB flash partition
+**Binary size:** 0x95cb0 bytes (~614 KB) — ~59% of 1 MB flash partition
 **License:** MIT
 
 This is the first stable release. No prior versions.
@@ -35,7 +35,7 @@ This release covers a complete BLE environmental sensor peripheral with companio
 - **OLED display** — 0.42" SSD1306, three equal 2 s pages (temperature · humidity ·
   pressure); persistent BLE-state badge (ADV/CONN/NOTIFY) top-left and `SIM` badge
   top-right on every page
-- **Unity on-target tests** — 37 tests across display, app_core, env_sensor, ble_env (1 ignored placeholder); run via `python3 firmware/test_app/run_tests.py`
+- **Unity on-target tests** — 62 tests across `app_core`, `ble_env`, `env_sensor`, `display` (1 ignored placeholder); run via `python3 firmware/test_app/run_tests.py`. (The earlier "37 tests" figure pre-dated the TEST-COLLISION fix in commit `e1ed479`, when 25 tests were silently dropped from the build.)
 
 ### Android Companion App (Phase 9B)
 
@@ -104,8 +104,8 @@ Android APK: `android/BleEnvNode/app/build/outputs/apk/debug/app-debug.apk`
 
 | Category | Tests | Status |
 |---|---|---|
-| Unity unit tests | 37 Tests 0 Failures 1 Ignored (display, app_core, env_sensor, ble_env) | Pass — on-target |
-| Manual BLE tests | TC-001–TC-011 | Pass — nRF Connect |
+| Unity unit tests | 62 Tests 0 Failures 1 Ignored (`app_core`, `ble_env`, `env_sensor`, `display`) | Pass — on-target |
+| Manual BLE tests | TC-001–TC-012 | Pass — nRF Connect |
 | Manual display tests | TC-D01–TC-D06 | Pass — physical OLED |
 | Manual security tests | TC-SEC-01–TC-SEC-06 | Pass — nRF Connect + Android |
 | Android reconnect | TC-AND-01 | Pass — Android 16 |

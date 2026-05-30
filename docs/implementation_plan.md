@@ -316,7 +316,7 @@ Changes in `BleRepository.kt`, `BleViewModel.kt`, `DashboardScreen.kt`:
 - `run_tests.py` rewritten to trigger tests via the Unity menu (`*\r\n`) rather than waiting for auto-run output that arrives before the script attaches.
 
 Exit criteria:
-- [DONE] 37 Tests 0 Failures 1 Ignored on-target.
+- [DONE] 37 Tests 0 Failures 1 Ignored on-target *(at Phase 10 close; later corrected to 62 after the TEST-COLLISION rename in `e1ed479` — see `docs/issues_encountered.md` Issue 3 follow-up and `docs/REVIEW_FINDINGS.md`).*
 - [DONE] `idf.py build` green.
 - [DONE] `./gradlew assembleDebug` green.
 - [DONE] TC-D05, TC-D06, TC-AND-01 verified manually.

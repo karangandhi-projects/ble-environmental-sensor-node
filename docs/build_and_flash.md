@@ -77,13 +77,13 @@ python3 firmware/test_app/run_tests.py   # opens /dev/ttyACM0, sends *, captures
 The script opens the port without resetting the device, sends `*` to the Unity menu, and reads output until the summary line appears (30 s timeout). A passing run ends with:
 
 ```text
-37 Tests 0 Failures 1 Ignored
+62 Tests 0 Failures 1 Ignored
 OK
 
 All tests passed.
 ```
 
-The 1 Ignored is the Phase 1.5 placeholder test — expected.
+The 1 Ignored is the Phase 1.5 placeholder test — expected. (Earlier runs reported `37 Tests` — that was before commit `e1ed479` renamed the per-component test dirs to unique basenames; see `docs/issues_encountered.md` Issue 3 follow-up.)
 
 ### Interactive run
 

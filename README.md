@@ -67,7 +67,7 @@ Full details in `docs/build_and_flash.md`.
 - **Sensor Override** (b7e00006): inject simulated values via BLE; ±2°C drift for realism
 - **TinyML** (b7e00007): on-device 5-class environmental classifier (comfortable/warm/cold/humid/danger) + anomaly detection, notifies on class change
 - 245-weight pure-C MLP (3→16→8→5), no external ML runtime required
-- Binary: **0x94f00 bytes (58% of 1MB flash)**
+- Binary: **0x95cb0 bytes (~59% of 1 MB flash)**
 
 **Android App (Phase 9B):**
 - BLE scan, connect, MITM Passkey pairing (Android prompts for the 6-digit passkey shown on the OLED)
@@ -158,7 +158,7 @@ Full details in `docs/build_and_flash.md`.
 
 **If you want to extend or modify it:** Read `docs/design_decisions.md` for the 19 architectural decisions and their rationale, `docs/implementation_plan.md` for the phase structure, and `CONTRIBUTING.md` for development guidelines.
 
-**If you want to validate it:** See `tests/manual_test_matrix.md` (19 test cases, all passing) and `docs/test_plan.md` for the full test strategy.
+**If you want to validate it:** See `tests/manual_test_matrix.md` (25 manual test cases — 24 Pass, TC-SEC-02 Obsolete after DD-020 swapped Just Works for MITM Passkey) and `docs/test_plan.md` for the full test strategy. On-target Unity suite: 62 Tests / 0 Failures / 1 Ignored.
 
 **If you are an AI coding agent:** Read `AGENT_BRIEF.md` and `CLAUDE.md` first — these define the per-phase workflow, approval gates, and scope constraints.
 
@@ -172,11 +172,11 @@ Full details in `docs/build_and_flash.md`.
 
 | Component | Status | Details |
 |-----------|--------|---------|
-| Firmware | ✅ Green | 0x94f00 bytes (58% flash) — ESP32-C3 / ESP-IDF v5.2.3 |
+| Firmware | ✅ Green | 0x95cb0 bytes (~59% flash) — ESP32-C3 / ESP-IDF v5.2.3 |
 | Android app | ✅ Green | `./gradlew assembleDebug` — min SDK 26 |
 | ML model | ✅ Trained | 98.83% on the synthetic test set (1500 synthetic + 379 override samples drawn from the same disjoint class boxes used to train — measures box-separability, not real-sensor skill). Real-sensor accuracy unknown until retrained on BME280/SHT31 readings. |
-| Unit tests | ✅ Build pass | 8 env_sensor tests + ble_env encode tests |
-| Manual tests | ✅ Pass | TC-001–TC-012, TC-D01–TC-D04, TC-SEC-01–TC-SEC-04 — all 20 pass (2026-05-29) |
+| Unit tests | ✅ On-target | 62 Tests / 0 Failures / 1 Ignored — Unity suite across `app_core`, `ble_env`, `env_sensor`, `display` |
+| Manual tests | ✅ Pass | TC-001–TC-012, TC-D01–TC-D06, TC-SEC-01 + TC-SEC-03–TC-SEC-06, TC-AND-01 — 24/25 Pass (TC-SEC-02 Obsolete after DD-020) |
 
 ---
 

@@ -338,7 +338,7 @@ Three reasons:
 
 1. **TFLite Micro is not in the ESP-IDF v5.2.3 component registry.** Integrating it requires manually adding a CMake component with a large external source tree. For a model this small, that complexity buys nothing.
 
-2. **The model is tiny.** 245 parameters at float32 = 980 bytes. The entire `tinyml_inference.c` + `ml_weights.h` adds approximately 5 KB to the firmware binary. The total firmware image is `0x99520` bytes (around 627 KB). ML is less than 1% of the binary footprint.
+2. **The model is tiny.** 245 parameters at float32 = 980 bytes. The entire `tinyml_inference.c` + `ml_weights.h` adds approximately 5 KB to the firmware binary. The total firmware image is `0x95cb0` bytes (around 614 KB). ML is less than 1% of the binary footprint.
 
 3. **Zero runtime overhead.** The forward pass is three matrix multiplications, two ReLU passes, and one softmax. On the ESP32-C3 at 160 MHz, this completes in microseconds. No interpreter, no memory allocation, no context switching.
 
