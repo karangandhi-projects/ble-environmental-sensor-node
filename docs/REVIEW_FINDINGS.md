@@ -30,6 +30,7 @@
 | A6 | `294bf6b` | Deleted BLE_ENV_CONN_* dead constants from app_config.h; DD-015 + power_budget.md updated — we no longer call ble_gap_update_params. |
 | B5 | `85571ca` | Deleted ML_AE_* arrays + ML_AE_HIDDEN_SIZE + ML_ANOMALY_THRESHOLD from ml_weights.h (DD-019 made them dead). extract_weights.py simplified. |
 | C7 (full) | `6a55cb7` | docs/principal_review_report.md body replaced with a 4-line pointer stub. SUPERSEDED banner no longer needed — the body is gone. |
+| A5 | — | DD-021 added — Option 1 (document why the existing access pattern is safe on single-core ESP32-C3; no code change). |
 
 **Build state at end of session:** firmware `0x95cb0` (post-A1; was `0x95b80` pre-A1 — last on-target verified), test_app `0x373c0` (unchanged, links green). No on-target re-verify done this session — should re-flash and confirm `62 Tests / 0 Failures / 1 Ignored` plus a Config write (TC-006) and reboot-persistence check (TC-011) to confirm A1 is behaviour-preserving.
 
@@ -158,7 +159,6 @@ The test's own header comment (lines 5-9) says this is intentional: a TDD **red*
 ## A. Correctness / code issues
 
 - **A1 [High] Blocking flash write inside a BLE callback.** `ble_env_service.c:151` calls `storage_config_save()` (NVS flash write, tens of ms) synchronously inside `gatt_access_cb` (NimBLE host task). Violates AGENT_BRIEF #7, NFR-003, DD-006, and `app_main.c:30` docstring. **Fix:** set a "config dirty" flag in `app_state`; do the NVS write in `telemetry_task` (mirror `force_sample`).
-- **A5 [Low] Inconsistent locking.** `s_conn_handle`/`s_ml_alert_subscribed` (ble_env_service.c) and `s_last_page` in `display.c:129` (`display_set_power`, no `s_mux`) are shared across tasks without the spinlock used elsewhere. Benign on single-core C3.
 
 ---
 

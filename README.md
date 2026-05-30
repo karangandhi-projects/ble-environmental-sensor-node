@@ -116,7 +116,7 @@ Full details in `docs/build_and_flash.md`.
 │   ├── architecture.md                # system layers, module map, event flows
 │   ├── build_and_flash.md             # full toolchain setup
 │   ├── debug_guide.md                 # symptom → diagnosis reference
-│   ├── design_decisions.md            # DD-001 to DD-019 with rationale
+│   ├── design_decisions.md            # DD-001 to DD-021 with rationale
 │   ├── gatt_profile.md                # FROZEN v2 — 6 characteristics, byte layouts
 │   ├── implementation_plan.md         # phase-by-phase with exit criteria
 │   ├── learning/
@@ -156,7 +156,7 @@ Full details in `docs/build_and_flash.md`.
 
 **If you want to understand what was built:** Start with the [Quick Start](#quick-start) to get the firmware running, then `docs/architecture.md` for system design and `docs/gatt_profile.md` for the BLE API.
 
-**If you want to extend or modify it:** Read `docs/design_decisions.md` for the 19 architectural decisions and their rationale, `docs/implementation_plan.md` for the phase structure, and `CONTRIBUTING.md` for development guidelines.
+**If you want to extend or modify it:** Read `docs/design_decisions.md` for the 21 architectural decisions and their rationale, `docs/implementation_plan.md` for the phase structure, and `CONTRIBUTING.md` for development guidelines.
 
 **If you want to validate it:** See `tests/manual_test_matrix.md` (25 manual test cases — 24 Pass, TC-SEC-02 Obsolete after DD-020 swapped Just Works for MITM Passkey) and `docs/test_plan.md` for the full test strategy. On-target Unity suite: 62 Tests / 0 Failures / 1 Ignored.
 

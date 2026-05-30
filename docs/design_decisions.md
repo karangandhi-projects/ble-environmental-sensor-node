@@ -226,6 +226,39 @@ Key finding: three fields beyond changing `io_cap` and `mitm` flag are required 
 Tradeoff:
 - Slightly more friction on first pair (user must type 6 digits). All subsequent reconnects are seamless (stored LTK).
 
+## DD-021 Shared-Static Access Pattern on Single-Core ESP32-C3
+
+### Context
+
+Three shared `static` variables are read and written across FreeRTOS task boundaries without an explicit lock:
+
+1. `s_conn_handle` (`uint16_t`, `ble_env_service.c`) — written by the NimBLE host task in CONNECT (line 366) and DISCONNECT (line 395) GAP events; read by `telemetry_task` in `notify_telemetry` / `notify_status` / `notify_ml_alert` (lines 513, 575, 585, 592, 602, 609–616).
+2. `s_ml_alert_subscribed` (`bool`, `ble_env_service.c`) — written by the NimBLE host task in DISCONNECT (line 397) and SUBSCRIBE (line 413); read by `telemetry_task` in `notify_ml_alert` (lines 609–610).
+3. `s_last_page` (`uint8_t`, `display.c`) — protected by `s_mux` inside `display_set_passkey` (line 160) and `display_clear_passkey` (line 169), but **not** protected inside `display_set_power` (line 129) and `display_tick` (lines 231/233/240/243).
+
+Independent review (REVIEW_FINDINGS A5) flagged these as "inconsistent locking." This DD records the analysis and the accepted position.
+
+### Decision
+
+**Option 1 — document why the existing access pattern is safe; no code change.**
+
+- ESP32-C3 is a single-core RV32IMC processor. Single-word loads and stores (`uint16_t`, `bool`, `uint8_t`) are atomic at the ISA level — no torn reads or writes are possible regardless of FreeRTOS preemption.
+- The `notify_*` call sites in `ble_env_service.c` follow a "check then call" pattern (e.g., `if (s_conn_handle != NONE) ble_gatts_notify_custom(s_conn_handle, ...)`). Wrapping only the check in a lock would not eliminate the race window between check and call; eliminating that window would require holding the lock *across* the BLE notify call itself — exactly the anti-pattern that AGENT_BRIEF §7 and DD-006 forbid (never block or hold a long critical section inside or across BLE callbacks/paths).
+- The `s_mux` in `display.c` exists to protect **compound multi-field updates** (passkey active flag + passkey value + page set together; sensor sample `memcpy`). Single-word writes to `s_last_page` from `display_set_power` or `display_tick` do not need the mutex for atomicity; they are already atomic by the RV32 ISA guarantee.
+- `display_tick` snapshots all multi-field state under `s_mux` into locals (lines 222–227), then reads/writes `s_last_page` outside the lock. That is correct: the lock guards the compound snapshot; `s_last_page` is then operated on as a single-word local-logic variable.
+- The worst-case outcome of a "check then use" preemption race on `s_conn_handle` is one redundant `ble_gatts_notify_custom()` call after disconnect, which NimBLE rejects with `BLE_HS_ENOTCONN` — handled correctly downstream. The race window is bounded by FreeRTOS preemption latency (typically tens of microseconds).
+
+### Alternatives considered
+
+- **Option 2 — add `volatile`**: Would prevent the compiler from hoisting reads out of loops. However, each variable is already accessed through a function-call boundary, so the compiler already emits a fresh memory load and cannot cache across the call. `volatile` would be harmless but unnecessary; adding it for appearances would mislead future readers into thinking there is a memory-ordering concern that `volatile` actually addresses (it does not).
+- **Option 3 — add `portMUX_TYPE` everywhere** (the pattern used in `app_state.c`): Would over-serialize interrupts for zero correctness benefit on a uniprocessor and add tens of cycles per access on the hot telemetry path. Appropriate where compound state must be read or written atomically (as in `app_state.c`); not appropriate for single-word fields with the constraints above.
+
+### Consequences
+
+- The existing access pattern is correct as-is for the single-core ESP32-C3 MVP scope.
+- If a future port targets a dual-core variant (ESP32, ESP32-S3, etc.), the right migration is `_Atomic`-qualified declarations with C11 `stdatomic.h` load/store operations — not `volatile` (which provides no ordering on multi-core) and not `portMUX` (which serializes interrupts globally). This DD documents that decision so future reviewers do not re-open the question.
+- REVIEW_FINDINGS A5 is closed.
+
 ## DD-014 Phase-by-Phase Human Checkpoints with Approval Gate
 
 Decision: Every phase ends with a structured report (code changes, build result, Unity result, manual TC result, doc updates, known issues), then waits for the user's go-ahead. Edits to existing source files require explicit user approval before the change is made; new files (tests, new modules, new docs) may be added freely.
