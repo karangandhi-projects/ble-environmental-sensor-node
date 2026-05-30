@@ -42,11 +42,13 @@ This adds the four component *implementations* (`app_core`, `ble_env`, `env_sens
 
 **Fix**: Added explicit entries for each test component:
 ```cmake
-list(APPEND EXTRA_COMPONENT_DIRS "${CMAKE_CURRENT_LIST_DIR}/../components/app_core/test")
-list(APPEND EXTRA_COMPONENT_DIRS "${CMAKE_CURRENT_LIST_DIR}/../components/ble_env/test")
-list(APPEND EXTRA_COMPONENT_DIRS "${CMAKE_CURRENT_LIST_DIR}/../components/env_sensor/test")
-list(APPEND EXTRA_COMPONENT_DIRS "${CMAKE_CURRENT_LIST_DIR}/../components/display/test")
+list(APPEND EXTRA_COMPONENT_DIRS "${CMAKE_CURRENT_LIST_DIR}/../components/app_core/test_app_core")
+list(APPEND EXTRA_COMPONENT_DIRS "${CMAKE_CURRENT_LIST_DIR}/../components/ble_env/test_ble_env")
+list(APPEND EXTRA_COMPONENT_DIRS "${CMAKE_CURRENT_LIST_DIR}/../components/env_sensor/test_env_sensor")
+list(APPEND EXTRA_COMPONENT_DIRS "${CMAKE_CURRENT_LIST_DIR}/../components/display/test_display")
 ```
+
+**Follow-up (2026-05-29, commit `e1ed479`)**: The dirs were originally all named `test/`. ESP-IDF derives a component's name from its directory basename, so the four `test/` dirs collided and CMake **silently kept only the last** entry in `EXTRA_COMPONENT_DIRS` (display) — dropping 25 of 62 written tests from the build with no error. The build looked healthy (`37 Tests 0 Failures 1 Ignored / OK`) because only the display tests ran. Fix was renaming each basename to be unique: `test_app_core/`, `test_ble_env/`, `test_env_sensor/`, `test_display/`. Result: on-target run jumped to `62 Tests 0 Failures 1 Ignored / OK`. **Lesson:** ESP-IDF component name = dir basename and must be unique across `EXTRA_COMPONENT_DIRS`; collisions dedupe silently.
 
 ---
 

@@ -20,7 +20,7 @@ See `docs/build_and_flash.md` for full toolchain setup including Android and ML.
 
 ## Testing Requirements
 
-- Any change to pure-logic firmware code (encoders, validators, state setters) must include or update a Unity test in the component's `test/` directory.
+- Any change to pure-logic firmware code (encoders, validators, state setters) must include or update a Unity test in the component's `test_<name>/` directory (e.g. `components/app_core/test_app_core/`). The dir basename must be unique across components — see `docs/issues_encountered.md` Issue 3.
 - GATT UUIDs and payload byte layouts are frozen — see `docs/gatt_profile.md`. Changes require explicit discussion.
 - Run the unit test suite before submitting a PR:
   ```bash

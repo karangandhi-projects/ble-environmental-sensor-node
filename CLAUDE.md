@@ -45,7 +45,7 @@ firmware/
 
 ## TDD rule
 
-For pure logic (encoders, validators, state setters, storage parsing, display formatters), write a failing Unity test under the component's `test/` directory **before** the implementation. Tests run on-target via ESP-IDF's unit-test-app.
+For pure logic (encoders, validators, state setters, storage parsing, display formatters), write a failing Unity test under the component's `test_<name>/` directory (e.g. `app_core/test_app_core/`, `ble_env/test_ble_env/`) **before** the implementation. Tests run on-target via ESP-IDF's unit-test-app. The dir basename must be unique — ESP-IDF derives the component name from it, and duplicate `test/` basenames silently dedupe (see `docs/issues_encountered.md` Issue 3).
 
 Exempt from TDD (manual nRF Connect / hardware verification only): `gatt_access_cb` dispatching, `gap_event_cb`, `advertise()`, NimBLE host task, SSD1306 register-write sequence, font bitmap data.
 

@@ -49,21 +49,22 @@ firmware/
 │   │   ├── include/{app_config.h, app_state.h, storage_config.h}
 │   │   ├── app_state.c
 │   │   ├── storage_config.c
-│   │   ├── test/{test_app_state.c, test_storage_config.c}
+│   │   ├── test_app_core/{test_app_state.c, test_storage_config.c, test_power_mode.c}
 │   │   └── CMakeLists.txt          (REQUIRES nvs_flash)
 │   ├── ble_env/                    (NimBLE GATT service)
 │   │   ├── include/ble_env_service.h
 │   │   ├── ble_env_service.c
-│   │   ├── test/test_ble_env_encode.c
+│   │   ├── test_ble_env/test_ble_env_encode.c
 │   │   └── CMakeLists.txt          (REQUIRES bt app_core env_sensor)
 │   ├── env_sensor/                 (sensor provider)
 │   │   ├── include/sensor_provider.h
 │   │   ├── sensor_provider.c
-│   │   ├── test/test_sensor_provider.c
+│   │   ├── test_env_sensor/{test_sensor_provider.c, test_sensor_override.c}
 │   │   └── CMakeLists.txt          (REQUIRES esp_timer)
-│   └── display/                    (SSD1306 driver + page rotator — Phase 1.5)
-│       ├── include/                (display.h, ssd1306.h, font_big.h — TBD)
-│       ├── test/test_display_pending.c
+│   └── display/                    (SSD1306 driver + page rotator)
+│       ├── include/{display.h, ssd1306.h, font_big.h}
+│       ├── display.c, ssd1306.c, font_big.c
+│       ├── test_display/{test_display_logic.c, test_display_pending.c}
 │       └── CMakeLists.txt
 └── test_app/                       (unit-test-app project for on-target Unity)
     ├── CMakeLists.txt
