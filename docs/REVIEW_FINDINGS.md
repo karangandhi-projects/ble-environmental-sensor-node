@@ -1,9 +1,30 @@
 # Independent Review Findings & Fix Log
 
-**Date:** 2026-05-29
-**Branch:** main (HEAD `55dc48b`)
-**Reviewer:** principal-level pass (independent of `docs/principal_review_report.md`, which is itself stale — see C7)
+**Date:** 2026-05-29 (created); last updated 2026-05-30 end-of-session-2.
+**Branch:** main (HEAD `aa79796` after session 2 — all 10 fix commits pushed to origin).
+**Reviewer:** principal-level pass (independent of `docs/principal_review_report.md`, which is itself stale — see C7).
 **Purpose:** Durable record of issues found, what's verified on hardware, and what needs fixing. Safe to resume from this file in a new session.
+
+---
+
+## Session 2026-05-30 — wrap & resume point
+
+**Closed this session (10 items, 7 commits all pushed):**
+
+| Item | Commit | Summary |
+|---|---|---|
+| TEST-COLLISION (docs) | `d0810f5` | Updated CLAUDE.md / CONTRIBUTING.md / architecture.md / issues_encountered.md to the post-rename `test_<name>/` layout; committed REVIEW_FINDINGS.md itself. |
+| C1 (docs) | `08d6420` | Replaced "Just Works" with MITM Passkey Display across 10 live docs; pointed everything at `docs/security_model.md` as the source of truth. |
+| C1 (source comments) | `fa0e802` | Same pairing-story fix in `ble_env_service.{c,h}` + `BleRepository.kt` / `DeviceState.kt` / `GattUuids.kt` doc-comments; corrected "See DD-008" → "See DD-020". |
+| B1 | `53c27fd` | Added `ml/extract_weights.py` to make deployed weights reproducible from `models/saved_model`. Smoke test surfaced a real saved_model-vs-deployed mismatch. |
+| B2 + B3 | `0f5adf8` | Propagated 98.83% (deployed-model truth) and the box-separability honesty caveat to README / tinyml_inference.h / RELEASE_NOTES. |
+| A1 | `a3ef354` | Deferred `storage_config_save()` out of `gatt_access_cb` via a dirty-flag mirror of `force_sample` — NVS write now runs in `telemetry_task` after notify. Firmware +304 B; test_app unchanged. |
+| C3 | `3b8acc2` | Reconciled binary size to `0x95cb0`, Unity to 62 / 0 / 1, manual to 24/25 + 1 Obsolete across README / RELEASE_NOTES / build_and_flash.md / tinyml_guide.md / implementation_plan.md. |
+| C4 | `aa79796` | Fixed RELEASE_NOTES DD cross-refs (DD-001/002/003/004/015 all mislabeled), `model_data.h` → `ml_weights.h`, "IRAM" → flash `.rodata`, "20-entry history" → `take(50)`. |
+
+**Build state at end of session:** firmware `0x95cb0` (post-A1; was `0x95b80` pre-A1 — last on-target verified), test_app `0x373c0` (unchanged, links green). No on-target re-verify done this session — should re-flash and confirm `62 Tests / 0 Failures / 1 Ignored` plus a Config write (TC-006) and reboot-persistence check (TC-011) to confirm A1 is behaviour-preserving.
+
+**Resume point for next session:** start at the "Remaining punch-list (next-pickup)" section below. Top of that list is **B2 path-a follow-up** (retrain + redeploy to fix the saved_model-vs-deployed mismatch) if you want a high-impact follow-up; otherwise pick from A2–A7 / B5 / C5 / C6 / C7-full / D / E (all small).
 
 ---
 
@@ -11,9 +32,8 @@
 
 - **Code fix committed (2026-05-29, `e1ed479`):** 4 dir renames (`test/` → `test_<name>/`) + `firmware/test_app/CMakeLists.txt` EXTRA_COMPONENT_DIRS update + `static` removed from `encode_telemetry`/`encode_status` in `ble_env_service.c`.
 - **On-target verified (2026-05-29):** `idf.py -p /dev/ttyACM0 flash monitor` printed **`62 Tests 0 Failures 1 Ignored / OK`** (was 37/0/1). All 25 previously-dropped tests pass, including the 3 `encode_*` frozen-GATT-layout regression locks. Capture note: agent-spawned serial (pyserial `run_tests.py` or raw `cat`) fails on the ESP32-C3 USB-Serial/JTAG CDC; only an interactive `!`-run terminal works.
-- **Doc-path cleanup committed (2026-05-30):** `CLAUDE.md` (TDD rule), `CONTRIBUTING.md` (testing section), `docs/architecture.md` (module layout tree), `docs/issues_encountered.md` (Issue 3 — added 2026-05-29 follow-up + lesson).
-
-Remaining for full closure of this item: push commits to origin (`git push`).
+- **Doc-path cleanup committed (2026-05-30, `d0810f5`):** `CLAUDE.md` (TDD rule), `CONTRIBUTING.md` (testing section), `docs/architecture.md` (module layout tree), `docs/issues_encountered.md` (Issue 3 — added 2026-05-29 follow-up + lesson).
+- **All commits pushed to origin.**
 
 ## ✅ C1 / C2 / mini-C7 — RESOLVED & COMMITTED (2026-05-30)
 
