@@ -2,7 +2,7 @@
 
 **Date:** 2026-05-29 (created); last updated 2026-05-30 end-of-session-2.
 **Branch:** main (HEAD `aa79796` after session 2 — all 10 fix commits pushed to origin).
-**Reviewer:** principal-level pass (independent of `docs/principal_review_report.md`, which is itself stale — see C7).
+**Reviewer:** principal-level pass (independent of `docs/principal_review_report.md`, now retired to a pointer stub).
 **Purpose:** Durable record of issues found, what's verified on hardware, and what needs fixing. Safe to resume from this file in a new session.
 
 ---
@@ -29,6 +29,7 @@
 | A4 | `178f180` | ble_gap_conn_find rc checked; on failure log + fall through to "assume unbonded → initiate pairing". |
 | A6 | `294bf6b` | Deleted BLE_ENV_CONN_* dead constants from app_config.h; DD-015 + power_budget.md updated — we no longer call ble_gap_update_params. |
 | B5 | `85571ca` | Deleted ML_AE_* arrays + ML_AE_HIDDEN_SIZE + ML_ANOMALY_THRESHOLD from ml_weights.h (DD-019 made them dead). extract_weights.py simplified. |
+| C7 (full) | TBD | docs/principal_review_report.md body replaced with a 4-line pointer stub. SUPERSEDED banner no longer needed — the body is gone. |
 
 **Build state at end of session:** firmware `0x95cb0` (post-A1; was `0x95b80` pre-A1 — last on-target verified), test_app `0x373c0` (unchanged, links green). No on-target re-verify done this session — should re-flash and confirm `62 Tests / 0 Failures / 1 Ignored` plus a Config write (TC-006) and reboot-persistence check (TC-011) to confirm A1 is behaviour-preserving.
 
@@ -95,7 +96,6 @@ Priority order in **Priority order** section. Open items at a glance:
 - **A5** (low) — inconsistent locking on s_conn_handle / s_ml_alert_subscribed / s_last_page.
 - **A2–A7** (med-low) — small code issues (SIM-badge override docs, default-sim near-constant range, unchecked return, inconsistent locking, dead conn-param constants, drift comment).
 - **C5** (low) — OLED page spec in requirements.md FR-011 still says {state, temp, humidity} @ 3000/1500/1500 ms; code is {temp, humidity, pressure} @ 2000/2000/2000 + persistent state badge.
-- **C7 (full)** (low) — beyond the stale-banner already added, decide retire-or-refresh for `docs/principal_review_report.md`.
 - Then the rest of B, C, D, E in priority order.
 
 ---
@@ -183,8 +183,6 @@ The test's own header comment (lines 5-9) says this is intentional: a TDD **red*
   - Manual matrix: README "19"/"20" vs **25 rows**. Also `TC-SEC-02` (Just Works) and `TC-SEC-05` (MITM) are **both marked Pass** — impossible on one build.
   - Binary size: `0x94f00` vs `0x99520` vs `0x98410` vs actual **`0x95b80`**.
 - **C4 [Med] `RELEASE_NOTES_v1_0_0.md` errors.** Scrambled DD cross-refs (DD-001/002/003/004/015 all mislabeled); "Embedded weights: …/`model_data.h`" (wrong file — it's `ml_weights.h`); "245 weights fit in IRAM" (they're flash `.rodata`); "20-entry history" (code shows `take(50)` in `DataAlertsScreen`); "TC-001–TC-011" (matrix has 012).
-- **C7 [Low] `principal_review_report.md` is itself stale** ("19 TC rows", "Just Works", `0x94f00`) and reads as a rubber stamp. Update or retire.
-
 ---
 
 ## D. Repo hygiene
