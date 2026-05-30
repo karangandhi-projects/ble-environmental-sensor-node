@@ -71,12 +71,14 @@ Acceptance:
 - Sensor provider interface remains unchanged.
 - Simulated provider can be selected for testing.
 
-### FR-010 Security — Stretch
-The device should support bonding and encrypted writes for control/configuration.
+### FR-010 Security — Phase 8 / Phase B (DONE)
+The device shall require MITM-protected pairing and link-layer encryption for any write to Control, Config, or Sensor Override.
 
 Acceptance:
-- Control/configuration writes require encryption when security is enabled.
-- Bonded central can reconnect without re-pairing.
+- Pairing method: MITM Passkey Display (`BLE_HS_IO_DISPLAY_ONLY`, `sm_mitm = 1`, `sm_sc = 1`). 6-digit passkey shown on the OLED; central prompts the user to type it.
+- Writes to Control / Config / Sensor Override return ATT `0x05` (Insufficient Authentication) on an unencrypted link, triggering the pairing flow.
+- Bonded central reconnects without re-pairing — `ble_gap_security_initiate()` is skipped for known peers; encryption is re-established via stored LTK on the first CCCD write (see `docs/security_model.md`).
+- Authoritative SM config and bonded-reconnect behaviour: `docs/security_model.md` + DD-020.
 
 ### FR-011 Display Output — MVP
 The device shall drive a 0.42" SSD1306 OLED on I2C (SDA=GPIO5, SCL=GPIO6, addr 0x3C) to surface live runtime status without a connected central.
@@ -115,7 +117,7 @@ A Kotlin/Jetpack Compose Android app shall connect to BLE_ENV_NODE and provide f
 
 Acceptance:
 - App scans for BLE_ENV_NODE, lists results, and connects on tap.
-- Just Works BLE pairing completes automatically on first connect.
+- MITM Passkey Display pairing on first connect: device's OLED shows a 6-digit passkey, Android prompts the user to type it, encryption establishes once the passkey matches. Subsequent connects to the bonded device skip the passkey prompt.
 - Dashboard tab shows live telemetry (temperature, humidity, pressure, uptime, sequence) and status (LED, last error, bond state).
 - Sensor tab provides sliders for temperature (−10–60°C), humidity (0–100%), pressure (900–1100 hPa) that write to b7e00006.
 - Slider values persist across tab navigation within the session.

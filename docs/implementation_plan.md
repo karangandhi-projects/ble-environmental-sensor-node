@@ -230,6 +230,8 @@ Docs updated:
 - tests/manual_test_matrix.md — TC-SEC-01..TC-SEC-03 rows marked Pass. ✓
 - docs/debug_guide.md — BLE pairing section added. ✓
 
+**Superseded by Phase B (MITM Passkey Display)** — the SC Just Works result above was the *initial* Phase 8 landing. After Phase A validation (`firmware/test_mitm/`, 2026-05-29) DD-020 replaced Just Works with `BLE_HS_IO_DISPLAY_ONLY` + `sm_mitm = 1`. The deployed firmware shows a 6-digit passkey on the OLED on first connect; bonded reconnects skip the prompt. Authoritative pairing method: `docs/security_model.md`. TC-SEC-02 (Just Works) is therefore obsolete; the live coverage is TC-SEC-05/06.
+
 ## Phase 9A — GATT v2 + Sensor Override ✓ DONE (2026-05-28)
 
 Goal: Upgrade GATT profile to v2 with Sensor Override + ML Alert characteristics.

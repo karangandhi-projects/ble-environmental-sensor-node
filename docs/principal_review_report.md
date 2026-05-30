@@ -1,5 +1,8 @@
 # Principal Manager Review Report
 
+> **⚠ STALE — superseded by `docs/REVIEW_FINDINGS.md` (2026-05-29).**
+> This report carries several facts that did not hold up to the later independent review: incorrect binary size (`0x94f00` — actual `0x95b80`), undercounted TC matrix (`19` rows — actual `25`), and the security summary saying "Just Works" when the deployed firmware uses **MITM Passkey Display** (DD-020). Treat it as a historical artefact; for the current punch-list and verified facts read `docs/REVIEW_FINDINGS.md`.
+
 ## Review Scope
 
 This package was reviewed as a handoff artifact for both a human embedded engineer and an autonomous coding agent.
@@ -98,6 +101,6 @@ All four "not approved until" gates are now satisfied:
 - Build verified on ESP-IDF v5.2.3 for ESP32-C3. Binary: 0x94f00 bytes (58% flash). ✓
 - Manual tests completed. All 19 TC rows marked Pass in `tests/manual_test_matrix.md`. ✓
 - Real hardware behaviour validated across Phases 9A–9C and Phase 10 (GATT v2, Android companion app, TinyML on-device, full BLE test run on 2026-05-29). ✓
-- Security implemented: Just Works pairing + NVS-persisted bond + ATT error 0x05 on unauthenticated writes to Control/Config/Sensor Override. TC-SEC-01–TC-SEC-04 all pass. ✓
+- Security implemented: **MITM Passkey Display** pairing (DD-020 — `BLE_HS_IO_DISPLAY_ONLY` + `sm_mitm = 1` + `sm_sc = 1`) + NVS-persisted bond + ATT error 0x05 on unauthenticated writes to Control/Config/Sensor Override. Live coverage: TC-SEC-01, TC-SEC-03, TC-SEC-04, TC-SEC-05, TC-SEC-06. TC-SEC-02 is obsolete (Just Works). See `docs/security_model.md` for authoritative SM config. ✓
 
 **Status: Approved as final portfolio release (v1.0.0).**

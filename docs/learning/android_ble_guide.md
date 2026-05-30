@@ -78,15 +78,15 @@ The Bluetooth SIG defines standard services and characteristics with compact 16-
 
 For custom, vendor-specific profiles you must use a full 128-bit UUID that you generate yourself. Our project uses its own namespace base: `b7e00000-4f4a-4c2a-8b7d-2f6a6c000000`. The CCCD, however, is a SIG-defined descriptor (`00002902-0000-1000-8000-00805f9b34fb`) and must use its standardized UUID — all BLE stacks recognize it.
 
-### ATT Security: The 0x05 Error and Just Works Pairing
+### ATT Security: The 0x05 Error and MITM Passkey Pairing
 
 When the central attempts to read or write a characteristic that requires encryption, the peripheral's ATT layer returns error code `0x05` — "Insufficient Authentication." This is not a fatal error. It is the peripheral's way of saying "I need you to prove you're trusted before I'll serve this request."
 
-The Android BLE stack catches this error and automatically initiates pairing. With our ESP32-C3 configured as `BLE_HS_IO_NO_INPUT_OUTPUT` (no keyboard, no display), the only available pairing method is **Just Works**: both devices generate a shared key without any user verification. No PIN dialog appears. The connection is then encrypted with this key, and the original operation is retried.
+The Android BLE stack catches this error and automatically initiates pairing. With our ESP32-C3 configured as `BLE_HS_IO_DISPLAY_ONLY` + `sm_mitm = 1` + `sm_sc = 1` (Secure Connections), the selected pairing method is **MITM Passkey Display**: the peripheral generates a random 6-digit passkey, shows it on the OLED, and Android prompts the user to type it. Once both sides have the same 6 digits the link is encrypted and the original ATT operation retries automatically.
 
-Just Works provides encryption (passive eavesdropping is prevented) but not authentication (a man-in-the-middle can impersonate either device). For an environmental sensor this trade-off is acceptable.
+MITM Passkey Display provides both encryption *and* MITM protection at the cost of a 6-digit (~20-bit) passkey, which an attacker with physical access to the OLED could in principle brute-force across many pairing attempts. For an environmental sensor this trade-off is acceptable. Full SM config: `docs/security_model.md`. The historical Phase 8 Just Works attempt is documented in `docs/phase8_pairing_debug.md` for context.
 
-The encrypted characteristics in this project are Control, Config, and Sensor Override — writes to any of these on a non-bonded connection will trigger the pairing dance automatically.
+The encrypted characteristics in this project are Control, Config, and Sensor Override — writes to any of these on a non-bonded connection will trigger the passkey-display pairing dance automatically.
 
 ### CCCD: How Notifications Actually Work at the Protocol Level
 
@@ -264,16 +264,18 @@ val bonded = g.device.bondState == BluetoothDevice.BOND_BONDED
 deviceState.value = DeviceState.Connected(bonded = bonded, encrypted = bonded)
 ```
 
-### Just Works Pairing with the ESP32-C3
+### MITM Passkey Pairing with the ESP32-C3
 
-When the ESP32-C3 rejects a write with ATT error `0x05`, Android initiates pairing automatically. Because both devices declare no I/O capability (`BLE_HS_IO_NO_INPUT_OUTPUT`), the Just Works method is selected:
+When the ESP32-C3 rejects a write with ATT error `0x05`, Android initiates pairing automatically. Because the peripheral declares `BLE_HS_IO_DISPLAY_ONLY` and the phone has `KEYBOARD_DISPLAY` capability, the SM agreement is Passkey Entry with the peripheral as displayer:
 
-1. Both sides exchange public keys and generate a shared secret without any user confirmation step.
-2. The link is encrypted with a session key derived from that shared secret.
-3. Long-term keys (LTK) are exchanged and stored on both sides. This is bonding.
-4. The original ATT operation is retried over the now-encrypted link.
+1. Both sides perform the Secure Connections ECDH key exchange.
+2. The peripheral generates a random 6-digit passkey via `esp_random() % 1000000`, displays it on the OLED, and injects it into NimBLE with `ble_sm_inject_io()`.
+3. Android shows a PIN entry dialog; the user types the 6 digits from the OLED.
+4. If the digits match, both sides derive the encryption key and the link goes encrypted.
+5. Long-term keys (LTK) are exchanged and stored on both sides. This is bonding.
+6. The original ATT operation is retried over the now-encrypted link.
 
-From the user's perspective, no dialog appears. The write just succeeds a moment later than expected.
+From the user's perspective, the OLED briefly shows `PAIR` + 6 digits, the phone prompts for those digits, and the write completes once the passkey is entered. Subsequent connections to the bonded device skip the prompt — see "Bonded Does Not Mean Encrypted on Reconnection" below.
 
 ### Bonded Does Not Mean Encrypted on Reconnection
 

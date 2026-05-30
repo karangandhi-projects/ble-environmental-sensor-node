@@ -1,5 +1,15 @@
 # Phase 8 Pairing Debug Log
 
+> **⚠ HISTORICAL — superseded by DD-020 (MITM Passkey Display).**
+> This file is the raw 2026-05-20 debug log from the Phase 8 attempt to get **SC Just Works** pairing working on Android 16. It declares "RESOLVED — SC Just Works" at attempt 19, then trails into a "What has NOT been tried" section that reads as still-broken — the contradiction reflects the messy reality of the day.
+>
+> What actually ships now is **not Just Works**. After Phase A validation (`firmware/test_mitm/`, 2026-05-29) the device was switched to **MITM Passkey Display** (`BLE_HS_IO_DISPLAY_ONLY` + `sm_mitm = 1` + `sm_sc = 1`) per DD-020. That is the authoritative pairing method.
+>
+> For current behaviour, read in this order:
+> 1. `docs/security_model.md` (live SM config + bonded-reconnect behaviour)
+> 2. `docs/design_decisions.md` → DD-020
+> 3. This file — kept only as a record of the Phase 8 debug journey.
+
 Device: ESP32-C3, NimBLE, firmware/components/ble_env/ble_env_service.c  
 Phone: OnePlus OxygenOS 16.0.3 (Android 16)  
 App: nRF Connect for Android  

@@ -19,7 +19,7 @@
 | TC-D03 | OLED SIM badge | `SIM` badge visible on all 3 pages while simulated-data flag is set | Pass |
 | TC-D04 | OLED dwell times | Temperature 2000 ms, Humidity 2000 ms, Pressure 2000 ms (+/- 200 ms) | Pass |
 | TC-SEC-01 | Write Control without pairing | ATT error 0x05 (Insufficient Authentication) returned; pairing flow initiated | Pass |
-| TC-SEC-02 | Just Works pairing via nRF Connect Bond | Pairing completes; encryption established; Control write succeeds | Pass |
+| TC-SEC-02 | ~~Just Works pairing via nRF Connect Bond~~ | **OBSOLETE — superseded by TC-SEC-05** after DD-020 switched the device from Just Works to MITM Passkey Display. Last Pass was on the original Phase 8 build (SC Just Works); no longer applicable to the deployed firmware. | Obsolete |
 | TC-SEC-03 | Disconnect then reconnect (bonded) | Encryption restored without re-pairing; `Encryption established` in serial log | Pass |
 | TC-SEC-04 | Clear bond on central, reconnect | Pairing prompt shown; re-pair succeeds; write succeeds | Pass |
 | TC-SEC-05 | MITM passkey pairing | OLED shows PAIR + 6-digit passkey; Android prompts PIN entry; correct passkey → Encryption established | Pass |

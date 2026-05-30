@@ -34,9 +34,11 @@ Pure-logic modules are exercised with ESP-IDF Unity through the firmware/test_ap
 
 ### ble_env (security — manual only, NimBLE callbacks exempt from Unity TDD)
 - TC-SEC-01: write Control without pairing → ATT error "Insufficient Authentication (0x05)".
-- TC-SEC-02: pair via Just Works → write Control succeeds.
+- TC-SEC-02: **OBSOLETE** — original Just Works exit criterion. Superseded by TC-SEC-05 after DD-020 switched the device to MITM Passkey Display. Kept in `tests/manual_test_matrix.md` as historical context only.
 - TC-SEC-03: disconnect and reconnect → encryption restored, write succeeds without re-pairing.
 - TC-SEC-04: clear bond on central, reconnect → pairing prompt → re-pair → write succeeds.
+- TC-SEC-05: fresh pair → OLED shows `PAIR` + 6-digit passkey, central prompts PIN entry, correct passkey establishes encryption.
+- TC-SEC-06: bonded reconnect → no PIN dialog; serial shows encryption restored immediately via stored LTK.
 
 ## Test Strategy
 

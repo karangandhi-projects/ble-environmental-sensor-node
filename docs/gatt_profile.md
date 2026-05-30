@@ -184,7 +184,7 @@ Notification sent only when class changes. Used in Phase C (TFLite Micro edge de
 
 ## Security Requirements (Phase 8)
 
-Link-layer encryption is required for the following operations. NimBLE enforces this at the ATT layer and returns ATT error `0x05` (Insufficient Authentication) if the connection is not encrypted. This triggers the central to initiate pairing (Just Works, no PIN).
+Link-layer encryption is required for the following operations. NimBLE enforces this at the ATT layer and returns ATT error `0x05` (Insufficient Authentication) if the connection is not encrypted. This triggers the central to initiate pairing (MITM Passkey Display — a 6-digit passkey is shown on the OLED and entered on the central).
 
 | Characteristic | Read | Write |
 |---|---|---|
@@ -195,7 +195,7 @@ Link-layer encryption is required for the following operations. NimBLE enforces 
 | Sensor Override | — | **encrypted** |
 | ML Alert | open (notify only) | — |
 
-Pairing method: Just Works (`BLE_HS_IO_NO_INPUT_OUTPUT`). Bonding enabled; keys persisted in NVS. Bonded centrals reconnect with encryption restored automatically.
+Pairing method: **MITM Passkey Display** (`BLE_HS_IO_DISPLAY_ONLY`, `sm_mitm = 1`, `sm_sc = 1`). Peripheral shows a random 6-digit passkey on the OLED; central prompts the user to type it. Bonding enabled; keys persisted in NVS. Bonded centrals reconnect with encryption restored automatically (no passkey prompt). Full SM config and bonded-reconnect details: `docs/security_model.md` (authoritative) and DD-020 in `docs/design_decisions.md`.
 
 ## Standard Services Optional
 

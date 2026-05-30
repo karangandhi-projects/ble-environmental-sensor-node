@@ -62,7 +62,7 @@ Full details in `docs/build_and_flash.md`.
 - Notification-based telemetry at configurable interval (500ms–60s, default 2s)
 - LED, display, and power mode control via BLE writes
 - Persistent configuration through NVS (survives reboot)
-- Just Works BLE pairing + bonding; encrypted writes for Control/Config/Sensor Override *(note: Just Works provides no MITM protection — suitable for development/prototype use; see [Roadmap](#roadmap) for passkey/numeric-comparison upgrade path)*
+- MITM Passkey Display pairing + bonding; encrypted writes for Control / Config / Sensor Override. OLED shows a 6-digit passkey on first connect; Android prompts the user to type it. Reconnects use stored bond keys silently. See [`docs/security_model.md`](docs/security_model.md) for the full SM config and bonded-reconnect behaviour.
 - OLED showing rotating pages: BLE state · temperature · humidity, with `SIM` badge
 - **Sensor Override** (b7e00006): inject simulated values via BLE; ±2°C drift for realism
 - **TinyML** (b7e00007): on-device 5-class environmental classifier (comfortable/warm/cold/humid/danger) + anomaly detection, notifies on class change
@@ -70,7 +70,7 @@ Full details in `docs/build_and_flash.md`.
 - Binary: **0x94f00 bytes (58% of 1MB flash)**
 
 **Android App (Phase 9B):**
-- BLE scan, connect, Just Works pairing
+- BLE scan, connect, MITM Passkey pairing (Android prompts for the 6-digit passkey shown on the OLED)
 - Dashboard: live telemetry + bond/encryption status
 - Sensor: override sliders (temp/humidity/pressure) with persistent state
 - Controls: LED / display / power mode / force-sample commands
@@ -205,7 +205,7 @@ This repo is structured so an AI coding agent (Claude Code or similar) can imple
 **Further out**
 - Secure OTA firmware update
 - Battery Service (0x180F) and Device Information Service (0x180A)
-- Passkey-entry or numeric-comparison pairing for MITM protection (replaces Just Works)
+- Numeric-comparison pairing (BLE_HS_IO_DISPLAY_YES_NO) as an alternative to the current Passkey Display flow
 - nRF52840 port for significantly lower power consumption
 
 ---
