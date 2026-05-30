@@ -23,6 +23,7 @@
 | C4 | `aa79796` | Fixed RELEASE_NOTES DD cross-refs (DD-001/002/003/004/015 all mislabeled), `model_data.h` → `ml_weights.h`, "IRAM" → flash `.rodata`, "20-entry history" → `take(50)`. |
 | C5 | `14aa84a` | requirements.md FR-011 page spec aligned with implementation: {temp, humidity, pressure} @ 2000 ms + persistent state badge. |
 | A7 | — (pending commit) | sensor_provider.c header "±2 hPa" → "±4 hPa" to match code (±400 Pa) and the inline comment. |
+| A2 | `<commit-sha>` | README override paragraph corrected — SIM badge stays on (matches sensor_provider.c setting simulated=true for override). |
 
 **Build state at end of session:** firmware `0x95cb0` (post-A1; was `0x95b80` pre-A1 — last on-target verified), test_app `0x373c0` (unchanged, links green). No on-target re-verify done this session — should re-flash and confirm `62 Tests / 0 Failures / 1 Ignored` plus a Config write (TC-006) and reboot-persistence check (TC-011) to confirm A1 is behaviour-preserving.
 
@@ -153,7 +154,6 @@ The test's own header comment (lines 5-9) says this is intentional: a TDD **red*
 ## A. Correctness / code issues
 
 - **A1 [High] Blocking flash write inside a BLE callback.** `ble_env_service.c:151` calls `storage_config_save()` (NVS flash write, tens of ms) synchronously inside `gatt_access_cb` (NimBLE host task). Violates AGENT_BRIEF #7, NFR-003, DD-006, and `app_main.c:30` docstring. **Fix:** set a "config dirty" flag in `app_state`; do the NVS write in `telemetry_task` (mirror `force_sample`).
-- **A2 [Med] SIM badge never clears in override mode.** `sensor_provider.c:72` flags override samples `simulated=true`, so the OLED `SIM` badge stays on — but `README.md:52` claims writing an override "clears the SIM badge." **Fix:** decide semantics; make code + docs agree (roadmap's "real BME280 clears it" is fine; README body is wrong).
 - **A3 [Med] Default sim telemetry is near-constant.** `sensor_provider.c:80-82` varies temp by `t%20` → 24.50–24.69 °C, hum 52.00–52.49%, ~1013 hPa. So the "realistic ±2 °C drift" (README:5,50,67) only exists in **override** mode; out of the box the ML class never leaves "comfortable." **Fix:** make default sim sweep class regions, or correct the claim.
 - **A4 [Low] Unchecked return.** `ble_env_service.c:369` ignores `ble_gap_conn_find()` return (uninitialized `_desc` on failure).
 - **A5 [Low] Inconsistent locking.** `s_conn_handle`/`s_ml_alert_subscribed` (ble_env_service.c) and `s_last_page` in `display.c:129` (`display_set_power`, no `s_mux`) are shared across tasks without the spinlock used elsewhere. Benign on single-core C3.
