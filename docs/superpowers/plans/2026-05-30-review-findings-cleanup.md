@@ -60,7 +60,7 @@ git push
 | T2  | A     | Haiku  | C5         | `docs/requirements.md`                                        | `- [x]` | `d4463cc` | C5 closed |
 | T3  | B     | Sonnet | A2         | `README.md`                                                   | `- [x]` | `baa6403` | A2 closed |
 | T4  | B     | Sonnet | A3         | `README.md`                                                   | `- [x]` | `2ac5825` | A3 closed |
-| T5  | B     | Sonnet | C6         | `docs/architecture.md`                                        | `- [ ]` | —      |       |
+| T5  | B     | Sonnet | C6         | `docs/architecture.md`                                        | `- [x]` | `49d0f0f` | C6 closed |
 | T6  | B     | Sonnet | A4         | `firmware/components/ble_env/ble_env_service.c`               | `- [ ]` | —      |       |
 | T7  | B     | Sonnet | A6         | `firmware/components/app_core/include/app_config.h`, DD-015, power_budget.md | `- [ ]` | —      |       |
 | T8  | B     | Sonnet | B5         | `firmware/components/tinyml_inference/include/ml_weights.h`, `ml/extract_weights.py` | `- [ ]` | —      |       |
