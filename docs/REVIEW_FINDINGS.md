@@ -30,7 +30,7 @@
 | A6 | `294bf6b` | Deleted BLE_ENV_CONN_* dead constants from app_config.h; DD-015 + power_budget.md updated — we no longer call ble_gap_update_params. |
 | B5 | `85571ca` | Deleted ML_AE_* arrays + ML_AE_HIDDEN_SIZE + ML_ANOMALY_THRESHOLD from ml_weights.h (DD-019 made them dead). extract_weights.py simplified. |
 | C7 (full) | `6a55cb7` | docs/principal_review_report.md body replaced with a 4-line pointer stub. SUPERSEDED banner no longer needed — the body is gone. |
-| A5 | — | DD-021 added — Option 1 (document why the existing access pattern is safe on single-core ESP32-C3; no code change). |
+| A5 | `3a119d9` | DD-021 added — Option 1 (document why the existing access pattern is safe on single-core ESP32-C3; no code change). |
 
 **Build state at end of session:** firmware `0x95cb0` (post-A1; was `0x95b80` pre-A1 — last on-target verified), test_app `0x373c0` (unchanged, links green). No on-target re-verify done this session — should re-flash and confirm `62 Tests / 0 Failures / 1 Ignored` plus a Config write (TC-006) and reboot-persistence check (TC-011) to confirm A1 is behaviour-preserving.
 
