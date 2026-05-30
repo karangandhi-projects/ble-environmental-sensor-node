@@ -22,9 +22,15 @@
  * @endcode
  *
  * @par Training
- * Model trained with Keras (train_classifier.py) on 1879 samples:
- * 1500 synthetic + 379 real device readings with ±2°C/±2%/±2hPa drift.
- * Test accuracy: 99.7%.
+ * Model trained with Keras (train_classifier.py) on 1500 synthetic samples
+ * + 379 override-generated samples. Deployed-model test accuracy: 98.83%
+ * (recorded in ml_weights.h header). The synthetic train/test split is drawn
+ * from the same disjoint, axis-aligned class boxes in collect_synthetic.py,
+ * so this number measures box-separability, not real-sensor skill. The 379
+ * "real device" readings are human slider entries inside those same boxes;
+ * they do not constitute independent real-sensor data. No real-sensor
+ * validation has been performed yet. See RELEASE_NOTES and
+ * docs/REVIEW_FINDINGS.md (B3) for the honest framing.
  *
  * @note This component is called from telemetry_task in app_main.c on every
  *       sensor cycle. The result is broadcast over BLE characteristic b7e00007

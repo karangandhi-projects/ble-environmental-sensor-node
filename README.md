@@ -141,7 +141,7 @@ Full details in `docs/build_and_flash.md`.
 ├── android/BleEnvNode/                # Kotlin/Compose companion app
 ├── ml/                                # Python ML training pipeline
 │   ├── collect_synthetic.py           # generate 1500-sample synthetic baseline
-│   ├── train_classifier.py            # 5-class MLP (99.7% on synthetic test set)
+│   ├── train_classifier.py            # 5-class MLP (98.83% on synthetic test set — box-separability, not real-sensor skill; see RELEASE_NOTES)
 │   ├── quantize.py                    # int8 quantization + model_data.cc
 │   └── verify_model.py                # smoke-test 5 known vectors
 ├── tests/manual_test_matrix.md        # TC rows with Pass/Not run status
@@ -174,7 +174,7 @@ Full details in `docs/build_and_flash.md`.
 |-----------|--------|---------|
 | Firmware | ✅ Green | 0x94f00 bytes (58% flash) — ESP32-C3 / ESP-IDF v5.2.3 |
 | Android app | ✅ Green | `./gradlew assembleDebug` — min SDK 26 |
-| ML model | ✅ Trained | 99.7% accuracy on synthetic + override-generated test data (1500 synthetic + 379 override samples) |
+| ML model | ✅ Trained | 98.83% on the synthetic test set (1500 synthetic + 379 override samples drawn from the same disjoint class boxes used to train — measures box-separability, not real-sensor skill). Real-sensor accuracy unknown until retrained on BME280/SHT31 readings. |
 | Unit tests | ✅ Build pass | 8 env_sensor tests + ble_env encode tests |
 | Manual tests | ✅ Pass | TC-001–TC-012, TC-D01–TC-D04, TC-SEC-01–TC-SEC-04 — all 20 pass (2026-05-29) |
 

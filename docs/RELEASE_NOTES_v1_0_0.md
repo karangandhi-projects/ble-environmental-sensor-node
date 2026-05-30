@@ -49,7 +49,7 @@ This release covers a complete BLE environmental sensor peripheral with companio
 ### ML Pipeline (Phase 9C)
 
 - Synthetic dataset generator: 1500 samples across 5 classes
-- Classifier training: 3→16→8→5 MLP, 99.7% accuracy on 375-sample synthetic test set — validated on synthetic and override-generated data only; real-sensor accuracy will vary until the classifier is retrained on BME280/SHT31 readings
+- Classifier training: 3→16→8→5 MLP, 98.83% on the 375-sample synthetic test set. **Important caveat:** the train/test split is drawn from the same disjoint, axis-aligned class boxes defined in `collect_synthetic.py`, so this number measures box-separability, not real-sensor skill. The 379 "real device" override-generated readings are human slider entries inside those same boxes — they don't constitute independent real-sensor data. No real-sensor validation has been performed yet; real-sensor accuracy will vary, and the classifier should be retrained on BME280/SHT31 readings before the number is claimed as a real-sensor result.
 - Weights quantization: float32 → int8 (optional; float32 deployed in v1.0.0)
 - Embedded weights: `firmware/components/tinyml_inference/include/model_data.h`
 

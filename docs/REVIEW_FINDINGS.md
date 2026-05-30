@@ -27,13 +27,21 @@ Remaining for full closure of this item: push commits to origin (`git push`).
 - **Smoke-tested:** ran the script against `ml/models/saved_model`; it produced a well-formed file with 245 weights regenerated. The output **differs from the deployed `ml_weights.h`** — confirming the B1 hypothesis that the deployed weights and the saved model on disk were out of sync (`saved_model dense/kernel[0,0] = 1.4600533` vs `ML_W1[0] = 1.45603526`). The deployed file was restored — choosing to retrain/redeploy is a separate decision (see B2/B3).
 - **Cross-refs fixed:** `ml/train_classifier.py` docstring no longer claims `quantize.py` writes `ml_weights.h` (it doesn't — it writes `model_data.cc`); `docs/architecture.md` ml/ block now lists `extract_weights.py` alongside the other scripts. `docs/design_decisions.md` DD-018 and `docs/learning/tinyml_guide.md` already referenced the script correctly — they were dangling pointers until this commit.
 
+## ✅ B2 / B3 — RESOLVED at the doc layer (2026-05-30)
+
+- **B2 (accuracy reconciliation, path b — no retraining):** chose to propagate **98.83%** everywhere (matches the deployed `ml_weights.h` header — that is the historical accuracy recorded by `train_classifier.py` for the training run that produced the deployed weights). The mismatching `99.7%` was removed from `firmware/components/tinyml_inference/include/tinyml_inference.h` (@par Training doc-comment), `README.md` (pipeline tree + status table), and `docs/RELEASE_NOTES_v1_0_0.md`. `docs/learning/tinyml_guide.md` already showed `98.83%` correctly. `docs/architecture.md` already says "see ml_weights.h for actual deployed accuracy" (touched in B1).
+- **B3 (box-separability caveat):** propagated to every place the accuracy is cited. The text makes three claims explicit: (1) the train/test split is drawn from the same disjoint, axis-aligned class boxes in `collect_synthetic.py`, so 98.83% measures box-separability not real-sensor skill; (2) the 379 "real device" override-generated readings are human slider entries inside those same boxes — not independent real-sensor data; (3) no real-sensor validation has been performed; the classifier should be retrained on BME280/SHT31 readings before the number can be claimed as a real-sensor result. Same wording in tinyml_inference.h / README / RELEASE_NOTES.
+- **Verification:** firmware builds green at `0x95b80` (comment-only header change, no runtime effect). Grep for `99\.7` in firmware/Android source returns no live results.
+- **Path-a follow-up (optional):** retrain via `train_classifier.py` + `extract_weights.py` to get a fresh accuracy on a fresh held-out test set, fix the saved_model-vs-deployed mismatch surfaced in B1, and update the numbers. This would change deployed weights → ML alert behaviour → needs on-target re-verify. Tracked as a separate open item.
+
 ## Remaining punch-list (next-pickup)
 
 Priority order in **Priority order** section. Open items at a glance:
-- **B2 / B3** (high) — reconcile 98.83% vs 99.7% accuracy and propagate the "box-separability ≠ skill" honesty caveat. Newly relevant after B1: there's now also a saved_model-vs-deployed mismatch to resolve (retrain + redeploy, or pick which weights are "the" weights).
 - **A1** (high, needs source-edit approval) — move `storage_config_save()` out of `gatt_access_cb` to the telemetry task.
+- **B2 path-a follow-up** (optional, high if pursued) — retrain + redeploy; resolve the saved_model-vs-deployed mismatch surfaced in B1.
 - **C3** (med) — reconcile binary size (`0x95b80`), Unity test count (62), manual TC count (25) wherever quoted.
 - **B5** (med) — delete dead autoencoder arrays (`ML_AE_*`, `ML_AE_HIDDEN_SIZE`, `ML_ANOMALY_THRESHOLD`) from `ml_weights.h`; `extract_weights.py` already prepared for this — once the AE block is removed it will naturally stop preserving it.
+- **C4** (med) — `RELEASE_NOTES_v1_0_0.md` other errors (scrambled DD cross-refs, `model_data.h` should be `ml_weights.h`, "245 weights fit in IRAM" is wrong — flash `.rodata`, "20-entry history" should be `take(50)`, "TC-001–TC-011" should be TC-012).
 - **C7 (full)** (low) — beyond the stale-banner already added, decide retire-or-refresh for `docs/principal_review_report.md`.
 - Then the rest of A, B, C, D, E in priority order.
 
