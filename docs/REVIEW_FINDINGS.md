@@ -15,14 +15,20 @@
 
 Remaining for full closure of this item: push commits to origin (`git push`).
 
+## ✅ C1 / C2 / mini-C7 — RESOLVED & COMMITTED (2026-05-30)
+
+- **C1 docs (`08d6420`):** SECURITY.md, README.md, gatt_profile.md, requirements.md (FR-010/FR-014), implementation_plan.md (Phase 8 superseded note), test_plan.md (TC-SEC-02 obsoleted, TC-SEC-05/06 added), manual_test_matrix.md (TC-SEC-02 → Obsolete), phase8_pairing_debug.md (historical banner — closes C2), learning/android_ble_guide.md (both sections rewritten), principal_review_report.md (stale banner — partial C7 + the Just Works line).
+- **C1 source comments (`fa0e802`):** ble_env_service.{c,h} (@par Security + init sequence; corrected "See DD-008" → "See DD-020"), BleRepository.kt (## Security KDoc), DeviceState.kt (@property encrypted), GattUuids.kt (ControlOpcodes block).
+- **Verification:** firmware build green at `0x95b80` (unchanged — pure comments). `grep -rn "[Jj]ust[ -][Ww]orks"` over `firmware/` and `android/` returns no live results. `docs/security_model.md` is now the single source of truth; every other doc either defers to it or carries a stale-banner.
+
 ## Remaining punch-list (next-pickup)
 
-Priority order below in **Priority order** section. Open items at a glance:
-- **C1** (high) — one pairing story (MITM Passkey Display) across the repo; touches multiple docs and the `BleRepository.kt:16` docstring.
+Priority order in **Priority order** section. Open items at a glance:
 - **B1** (high) — add `ml/extract_weights.py` to make the deployed weights reproducible.
 - **B2 / B3** (high) — reconcile 98.83% vs 99.7% accuracy and propagate the "box-separability ≠ skill" honesty caveat.
 - **A1** (high, needs source-edit approval) — move `storage_config_save()` out of `gatt_access_cb` to the telemetry task.
 - **C3** (med) — reconcile binary size (`0x95b80`), Unity test count (62), manual TC count (25) wherever quoted.
+- **C7 (full)** (low) — beyond the stale-banner already added, decide retire-or-refresh for `docs/principal_review_report.md`.
 - Then the rest of A, B, C, D, E in priority order.
 
 ---
