@@ -113,10 +113,8 @@ These values are now explicitly set in firmware (previously defaults).
 
 ### Connection interval
 
-- Peripheral preference: 500–1000 ms (NimBLE units: 400–800 × 1.25 ms)
-- Slave latency: 0 (no latency — control commands remain responsive)
-- Supervision timeout: 4000 ms (NimBLE units: 400 × 10 ms)
-- Note: central may accept, reject, or negotiate different values; the peripheral only requests
+- The firmware does not currently negotiate connection intervals; `ble_gap_update_params()` was removed during Phase 8 pairing debug and the supporting `BLE_ENV_CONN_*` constants have been deleted. The peer central picks the connection interval on its own.
+- See DD-015 for the rationale and the path to re-introducing negotiation (must be ordered after `BLE_GAP_EVENT_ENC_CHANGE`).
 
 ### Power mode commands (BLE-controlled, opcode 0x20)
 

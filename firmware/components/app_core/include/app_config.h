@@ -56,16 +56,12 @@
 #define BLE_ENV_OLED_X_OFFSET    28       /**< Column offset inside 128-wide controller buffer. */
 /** @} */
 
-/** @defgroup adv_config Advertising / Connection Intervals (Phase 7)
- *  NimBLE uses 0.625 ms units for advertising and 1.25 ms for connection.
+/** @defgroup adv_config Advertising Interval (Phase 7)
+ *  NimBLE uses 0.625 ms units for advertising.
  *  @{
  */
 #define BLE_ENV_ADV_ITVL_MS          250  /**< Advertising interval in ms (halves default ~100 ms duty cycle). */
 #define BLE_ENV_ADV_ITVL_UNITS       ((BLE_ENV_ADV_ITVL_MS * 8) / 5)  /**< = 400 NimBLE units (0.625 ms each). */
-#define BLE_ENV_CONN_ITVL_MIN_UNITS  400  /**< Preferred min connection interval: 500 ms. */
-#define BLE_ENV_CONN_ITVL_MAX_UNITS  800  /**< Preferred max connection interval: 1000 ms. */
-#define BLE_ENV_CONN_LATENCY         0    /**< Slave latency: 0 (respond to every event for fast writes). */
-#define BLE_ENV_CONN_SUPERVISION_UNITS 400 /**< Link supervision timeout: 4000 ms. */
 /** @} */
 
 /** @defgroup control_opcodes BLE Control Characteristic Opcodes (b7e00003, Phase 7)

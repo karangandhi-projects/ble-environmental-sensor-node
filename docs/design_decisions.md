@@ -144,18 +144,17 @@ Tradeoff:
 
 ## DD-015 Explicit Power Interval Tuning, Sleep Modes, and Display Power Control
 
-Decision: Set advertising interval to 250 ms and request a 500–1000 ms preferred connection interval on every connect. Expose power mode (active / light sleep / deep sleep) and display state (on / off / dim) via BLE Control characteristic writes, using the same opcode pattern established for LED control.
+Decision: Set advertising interval to 250 ms. Expose power mode (active / light sleep / deep sleep) and display state (on / off / dim) via BLE Control characteristic writes, using the same opcode pattern established for LED control.
 
 Reason:
 
 - **Advertising interval (250 ms)**: halves radio duty cycle vs the NimBLE default ~100 ms; discovery still completes in <1 s so developer UX is not impacted. Explicitly chosen so the intent is documented and traceable.
-- **Preferred connection interval (500–1000 ms)**: aligns with sensor-monitoring use case from power_budget.md. Slave latency kept at 0 so control characteristic writes feel instant.
+- **Connection interval**: the firmware does **not** call `ble_gap_update_params()`; the call was added during Phase 7 but removed during Phase 8 pairing debug to avoid a race with `BLE_GAP_EVENT_ENC_CHANGE` (the update request arrived before the link was encrypted, causing pairing failures on Android 16). The four `BLE_ENV_CONN_*` constants that supported the call (`BLE_ENV_CONN_ITVL_MIN_UNITS`, `BLE_ENV_CONN_ITVL_MAX_UNITS`, `BLE_ENV_CONN_LATENCY`, `BLE_ENV_CONN_SUPERVISION_UNITS`) had no users after the removal and have been deleted. Power tuning on the connection side is therefore reduced to the peripheral-side advertising interval (250 ms) plus whatever connection interval the central negotiates on its own. Re-introducing the negotiation would require ordering it after `BLE_GAP_EVENT_ENC_CHANGE`.
 - **Power mode via opcode 0x20**: reuses the existing Control characteristic, no new GATT characteristics needed. Deep sleep disconnects BLE and wakes after 30 s via timer — demonstrable in a portfolio context. Light sleep (opcode 0x01) uses `CONFIG_PM_ENABLE` + `esp_pm_configure()` and keeps the BLE connection alive.
 - **Display power via opcode 0x30**: SSD1306 DISPLAYOFF drops panel current from ~5–10 mA to ~20 µA. Ephemeral (opcode 0x30) for runtime control, persistent (Config flags bit 1) for boot-time preference — mirrors the report_interval pattern (live control + NVS persistence).
 
 Tradeoff:
 
-- A central can negotiate a shorter connection interval than requested; the device cannot enforce its preference.
 - Deep sleep resets all volatile state (power mode, ephemeral display) — only NVS-backed config survives.
 - Light sleep on ESP32-C3 with BLE requires careful clock config; `CONFIG_PM_ENABLE=y` added to sdkconfig.defaults — a full clean rebuild is required after this change.
 
