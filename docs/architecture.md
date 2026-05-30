@@ -42,7 +42,7 @@ firmware/
 ├── CMakeLists.txt                  (top-level IDF project)
 ├── sdkconfig.defaults
 ├── main/
-│   ├── CMakeLists.txt              (REQUIRES app_core ble_env env_sensor display)
+│   ├── CMakeLists.txt              (REQUIRES app_core ble_env env_sensor display tinyml_inference)
 │   └── app_main.c                  (only file in main/)
 ├── components/
 │   ├── app_core/                   (state, storage, app_config.h)
@@ -51,27 +51,32 @@ firmware/
 │   │   ├── storage_config.c
 │   │   ├── test_app_core/{test_app_state.c, test_storage_config.c, test_power_mode.c}
 │   │   └── CMakeLists.txt          (REQUIRES nvs_flash)
-│   ├── ble_env/                    (NimBLE GATT service)
+│   ├── ble_env/                    (NimBLE GATT v2 server — 6 characteristics)
 │   │   ├── include/ble_env_service.h
 │   │   ├── ble_env_service.c
 │   │   ├── test_ble_env/test_ble_env_encode.c
 │   │   └── CMakeLists.txt          (REQUIRES bt app_core env_sensor)
-│   ├── env_sensor/                 (sensor provider)
+│   ├── env_sensor/                 (sensor provider — simulated + override + ±2°C drift)
 │   │   ├── include/sensor_provider.h
 │   │   ├── sensor_provider.c
 │   │   ├── test_env_sensor/{test_sensor_provider.c, test_sensor_override.c}
 │   │   └── CMakeLists.txt          (REQUIRES esp_timer)
-│   └── display/                    (SSD1306 driver + page rotator)
-│       ├── include/{display.h, ssd1306.h, font_big.h}
-│       ├── display.c, ssd1306.c, font_big.c
-│       ├── test_display/{test_display_logic.c, test_display_pending.c}
-│       └── CMakeLists.txt
+│   ├── display/                    (SSD1306 driver + page rotator)
+│   │   ├── include/{display.h, ssd1306.h, font_big.h}
+│   │   ├── display.c, ssd1306.c, font_big.c
+│   │   ├── test_display/{test_display_logic.c, test_display_pending.c}
+│   │   └── CMakeLists.txt
+│   └── tinyml_inference/           (pure-C MLP classifier — Phase 9C)
+│       ├── include/
+│       │   ├── tinyml_inference.h  (public API: ml_class_t, ml_result_t, tinyml_infer)
+│       │   └── ml_weights.h        (245 floats: W1/b1/W2/b2/W3/b3, embedded at compile time)
+│       └── tinyml_inference.c      (dense + ReLU + softmax + anomaly threshold)
 └── test_app/                       (unit-test-app project for on-target Unity)
     ├── CMakeLists.txt
     └── main/{test_main.c, CMakeLists.txt}
 ```
 
-Component dependency graph: `main → app_core, ble_env, env_sensor, display`; `ble_env → app_core, env_sensor`; `display → app_core, env_sensor (Phase 1.5)`. Cross-component coupling is explicit via `REQUIRES`.
+Component dependency graph: `main → app_core, ble_env, env_sensor, display, tinyml_inference`; `ble_env → app_core, env_sensor`; `display → app_core, env_sensor`; `tinyml_inference` has no internal deps (pure C math on flash-resident constants). Cross-component coupling is explicit via `REQUIRES`.
 
 ## Runtime State Machine
 
@@ -196,20 +201,7 @@ To port to another platform:
 
 ### Component Map — Updated
 
-`firmware/components/` now contains a fifth component:
-
-```text
-firmware/components/
-├── app_core/          (state, storage, app_config.h)
-├── ble_env/           (NimBLE GATT service — GATT v2: 6 characteristics)
-├── env_sensor/        (sensor provider — override + ±2°C drift)
-├── display/           (SSD1306 driver + page rotator)
-└── tinyml_inference/  (pure-C MLP classifier + anomaly detection)  ← NEW Phase 9C
-    ├── include/
-    │   ├── tinyml_inference.h    (public API: ml_class_t, ml_result_t, tinyml_infer)
-    │   └── ml_weights.h          (245 floats: W1/b1/W2/b2/W3/b3, embedded at compile time)
-    └── tinyml_inference.c        (dense + ReLU + softmax + anomaly threshold)
-```
+See the canonical "Module Layout" section above; `tinyml_inference` is included there. The Phase 9 work added one new component and did not change the dependencies of the existing four.
 
 Android companion app added at repository root:
 

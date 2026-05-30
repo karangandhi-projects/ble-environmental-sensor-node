@@ -25,6 +25,7 @@
 | A7 | — (pending commit) | sensor_provider.c header "±2 hPa" → "±4 hPa" to match code (±400 Pa) and the inline comment. |
 | A2 | `baa6403` | README override paragraph corrected — SIM badge stays on (matches sensor_provider.c setting simulated=true for override). |
 | A3 | `2ac5825` | README sensor-status paragraph: default sim is near-constant; realistic drift exists only under override. |
+| C6 | <commit-sha> | architecture.md: single canonical 5-component Module Layout; Phase 9 Extensions subsection collapsed to a pointer up. Stale "display TBD" removed. |
 
 **Build state at end of session:** firmware `0x95cb0` (post-A1; was `0x95b80` pre-A1 — last on-target verified), test_app `0x373c0` (unchanged, links green). No on-target re-verify done this session — should re-flash and confirm `62 Tests / 0 Failures / 1 Ignored` plus a Config write (TC-006) and reboot-persistence check (TC-011) to confirm A1 is behaviour-preserving.
 
@@ -91,7 +92,6 @@ Priority order in **Priority order** section. Open items at a glance:
 - **B5** (med) — delete dead autoencoder arrays (`ML_AE_*`, `ML_AE_HIDDEN_SIZE`, `ML_ANOMALY_THRESHOLD`) from `ml_weights.h`; `extract_weights.py` already prepared for this — once the AE block is removed it will naturally stop preserving it.
 - **A2–A7** (med-low) — small code issues (SIM-badge override docs, default-sim near-constant range, unchecked return, inconsistent locking, dead conn-param constants, drift comment).
 - **C5** (low) — OLED page spec in requirements.md FR-011 still says {state, temp, humidity} @ 3000/1500/1500 ms; code is {temp, humidity, pressure} @ 2000/2000/2000 + persistent state badge.
-- **C6** (low) — `architecture.md` "Module Layout" vs "Phase 9 Extensions" double-listing; merge.
 - **C7 (full)** (low) — beyond the stale-banner already added, decide retire-or-refresh for `docs/principal_review_report.md`.
 - Then the rest of B, C, D, E in priority order.
 
@@ -183,7 +183,6 @@ The test's own header comment (lines 5-9) says this is intentional: a TDD **red*
   - Manual matrix: README "19"/"20" vs **25 rows**. Also `TC-SEC-02` (Just Works) and `TC-SEC-05` (MITM) are **both marked Pass** — impossible on one build.
   - Binary size: `0x94f00` vs `0x99520` vs `0x98410` vs actual **`0x95b80`**.
 - **C4 [Med] `RELEASE_NOTES_v1_0_0.md` errors.** Scrambled DD cross-refs (DD-001/002/003/004/015 all mislabeled); "Embedded weights: …/`model_data.h`" (wrong file — it's `ml_weights.h`); "245 weights fit in IRAM" (they're flash `.rodata`); "20-entry history" (code shows `take(50)` in `DataAlertsScreen`); "TC-001–TC-011" (matrix has 012).
-- **C6 [Low] `architecture.md` half-stale.** Top "Module Layout" shows `display/` as "TBD — Phase 1.5" and 4 components; bottom "Phase 9 Extensions" shows the real 5 components. Merge. Also `design_decisions.md` has DD-014 out of order at the end; README says "DD-001 to DD-019" but DD-020 exists.
 - **C7 [Low] `principal_review_report.md` is itself stale** ("19 TC rows", "Just Works", `0x94f00`) and reads as a rubber stamp. Update or retire.
 
 ---
