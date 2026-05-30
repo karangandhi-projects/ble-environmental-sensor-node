@@ -26,7 +26,7 @@
 | A2 | `baa6403` | README override paragraph corrected — SIM badge stays on (matches sensor_provider.c setting simulated=true for override). |
 | A3 | `2ac5825` | README sensor-status paragraph: default sim is near-constant; realistic drift exists only under override. |
 | C6 | `49d0f0f` | architecture.md: single canonical 5-component Module Layout; Phase 9 Extensions subsection collapsed to a pointer up. Stale "display TBD" removed. |
-| A4 | — | ble_gap_conn_find rc checked; on failure log + fall through to "assume unbonded → initiate pairing". |
+| A4 | `178f180` | ble_gap_conn_find rc checked; on failure log + fall through to "assume unbonded → initiate pairing". |
 
 **Build state at end of session:** firmware `0x95cb0` (post-A1; was `0x95b80` pre-A1 — last on-target verified), test_app `0x373c0` (unchanged, links green). No on-target re-verify done this session — should re-flash and confirm `62 Tests / 0 Failures / 1 Ignored` plus a Config write (TC-006) and reboot-persistence check (TC-011) to confirm A1 is behaviour-preserving.
 
