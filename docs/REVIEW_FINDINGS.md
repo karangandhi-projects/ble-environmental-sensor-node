@@ -51,13 +51,23 @@ Numbers everywhere now match the verified state. Current build size **0x95cb0** 
 - **Manual TC count and ranges** updated in `README.md` (validate-it line + status row), `docs/RELEASE_NOTES_v1_0_0.md` (TC-001–TC-011 → TC-001–TC-012 — also resolves one of C4's items). TC-SEC-02 now consistently labelled Obsolete (already done in C1 sweep).
 - **`docs/principal_review_report.md`** stale numbers untouched — the top SUPERSEDED banner from C1 already enumerates them; full retire-or-refresh remains under C7.
 
+## ✅ C4 — RESOLVED (2026-05-30)
+
+`docs/RELEASE_NOTES_v1_0_0.md` cleanup:
+- **DD cross-refs fixed.** Bullets in the "Architecture Decisions" section were mislabelled against `docs/design_decisions.md`. Corrected: DD-001 is "BLE Peripheral/GATT Server first" (was attached to NimBLE); DD-002 is "ESP-IDF + NimBLE" (was attached to Simulated sensor); DD-003 is "Simulated sensor first" (was attached to Telemetry task); DD-004 is "Stable custom GATT profile" (was attached to NVS persistence). "Telemetry task" now correctly cites DD-006 (Do Not Block in BLE Callbacks). "NVS for config persistence" now correctly cites DD-007. "Pure-C MLP" now correctly cites DD-018 (was DD-015 which is power tuning).
+- **`model_data.h` → `ml_weights.h`** in the "Embedded weights" bullet, plus a clarifying note that the int8 `model_data.cc` exists but is not compiled into the firmware.
+- **"245 weights fit in IRAM" → flash `.rodata`** — `static const float` arrays land in `.rodata` (flash), not IRAM. ~980 bytes; the qualifier was technically inaccurate.
+- **"20-entry history" → "last 50 entries (`take(50)`)"** to match `DataAlertsScreen.kt:97`.
+- **TC range (C4 sub-item) — already fixed in C3** (`TC-001–TC-011` → `TC-001–TC-012`).
+
 ## Remaining punch-list (next-pickup)
 
 Priority order in **Priority order** section. Open items at a glance:
 - **B2 path-a follow-up** (optional, high if pursued) — retrain + redeploy; resolve the saved_model-vs-deployed mismatch surfaced in B1.
 - **B5** (med) — delete dead autoencoder arrays (`ML_AE_*`, `ML_AE_HIDDEN_SIZE`, `ML_ANOMALY_THRESHOLD`) from `ml_weights.h`; `extract_weights.py` already prepared for this — once the AE block is removed it will naturally stop preserving it.
-- **C4 (remaining)** (med) — `RELEASE_NOTES_v1_0_0.md` other errors: scrambled DD cross-refs (DD-001/002/003/004/015 mislabeled), `model_data.h` should be `ml_weights.h`, "245 weights fit in IRAM" is wrong — flash `.rodata`, "20-entry history" should be `take(50)`. (TC range now fixed.)
 - **A2–A7** (med-low) — small code issues (SIM-badge override docs, default-sim near-constant range, unchecked return, inconsistent locking, dead conn-param constants, drift comment).
+- **C5** (low) — OLED page spec in requirements.md FR-011 still says {state, temp, humidity} @ 3000/1500/1500 ms; code is {temp, humidity, pressure} @ 2000/2000/2000 + persistent state badge.
+- **C6** (low) — `architecture.md` "Module Layout" vs "Phase 9 Extensions" double-listing; merge.
 - **C7 (full)** (low) — beyond the stale-banner already added, decide retire-or-refresh for `docs/principal_review_report.md`.
 - Then the rest of B, C, D, E in priority order.
 
