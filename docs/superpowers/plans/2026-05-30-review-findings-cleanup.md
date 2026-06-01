@@ -71,7 +71,7 @@ git push
 | T13 | D     | Sonnet | D2         | `firmware/components/ble_env/ble_env_service.c`, `SECURITY.md`, REVIEW_FINDINGS | `- [ ]` | —      |       |
 | T14 | D     | Sonnet | E1         | `.github/workflows/build.yml` (new), `.github/workflows/README.md` (delete), REVIEW_FINDINGS | `- [ ]` | —      |       |
 | T15 | D     | Sonnet | E4         | `android/.../BleRepository.kt`, `android/.../BleViewModel.kt`, REVIEW_FINDINGS | `- [ ]` | —      |       |
-| T16 | D     | Sonnet | E5         | `docs/issues_encountered.md`, REVIEW_FINDINGS                  | `- [ ]` | —      |       |
+| T16 | D     | Sonnet | E5         | `docs/issues_encountered.md`, REVIEW_FINDINGS                  | `- [x]` | `b0b503b` | E5 closed |
 | T17 | D     | Opus   | E2 (DEFERRED) | host test runner, mock ESP-IDF stubs, CI                    | `- [-]` | —      | DEFERRED — new infra, out of session budget |
 
 **Recommended order:** T1 → T2 in parallel (both Haiku, no file overlap), then T3 → T4 → T5 → T6 → T7 → T8 → T9 (serial; T3 and T4 share README.md so they cannot parallelize), then T10, then T11 if pursued. **Phase D (T12–T16) added 2026-06-01:** serial Sonnet pass on the long-tail review items; T11/T17 deferred; E3 skipped (needs hardware).
