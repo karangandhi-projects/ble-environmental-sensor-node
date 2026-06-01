@@ -10,6 +10,7 @@ firmware/test_mitm/sdkconfig
 __pycache__/
 *.pyc
 ml/.venv/
+ml/models/*.tflite
 
 # Android build artifacts
 android/BleEnvNode/.gradle/

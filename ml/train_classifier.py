@@ -16,19 +16,17 @@ CRITICAL: CLASS_ORDER must match:
 Do NOT use sklearn's LabelEncoder (it sorts alphabetically and would change indices).
 
 Outputs:
-    models/model.tflite     — float32 TFLite model (for Android MlClassifier, Phase 9B)
     models/saved_model/     — Keras SavedModel format consumed by extract_weights.py
-                              (and by quantize.py for the unused int8 path)
 
 Usage:
     source .venv/bin/activate
     python3 train_classifier.py
 
-After training, run verify_model.py to smoke-test, then extract_weights.py to
-regenerate the deployed C weights in
-firmware/components/tinyml_inference/include/ml_weights.h. (quantize.py is
-optional — it produces an int8 byte array in model_data.cc for a potential
-future TFLite Micro path; not consumed by the current firmware.)
+After training, run verify_model.py to smoke-test the saved_model, then
+extract_weights.py to regenerate the deployed C weights in
+firmware/components/tinyml_inference/include/ml_weights.h.
+
+Canonical pipeline: collect_synthetic.py -> train_classifier.py -> saved_model/ -> extract_weights.py -> ml_weights.h
 """
 import pandas as pd
 import numpy as np
@@ -88,14 +86,6 @@ if acc < 0.85:
     raise SystemExit("Accuracy below 0.85 — increase sample count in collect_synthetic.py and re-run.")
 
 os.makedirs('models', exist_ok=True)
-# SavedModel format required by quantize.py (tf.lite.TFLiteConverter.from_saved_model).
 model.export('models/saved_model')
 
-# Float32 TFLite model for Android MlClassifier (Phase 9B integration).
-converter = tf.lite.TFLiteConverter.from_keras_model(model)
-tflite_model = converter.convert()
-with open('models/model.tflite', 'wb') as f:
-    f.write(tflite_model)
-
-print(f"Saved models/model.tflite ({len(tflite_model)} bytes)")
 print("Class order:", CLASS_ORDER)

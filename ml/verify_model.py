@@ -1,9 +1,9 @@
 """
-Smoke-test the float32 TFLite model against five known class vectors.
+Regression check — validate the saved_model against five known class vectors.
 
 Tests one representative input per class that should be clearly inside the
 class region (not near a boundary). All five must classify correctly with
-confidence ≥ 0.90 for the model to pass.
+confidence >= 0.90 for the model to pass.
 
 This test catches regressions in the training pipeline (e.g. if CLASS_ORDER
 was accidentally reordered, all class indices would be wrong).
@@ -13,8 +13,10 @@ Usage:
     python3 verify_model.py
 
 Prerequisites:
-    models/model.tflite must exist (run train_classifier.py first).
+    models/saved_model/ must exist (run train_classifier.py first).
+    TensorFlow 2.13+ must be installed (pip install -r requirements.txt).
 """
+import sys
 import numpy as np
 import tensorflow as tf
 
@@ -36,20 +38,25 @@ test_vectors = [
     (55.0, 10.0,  980.0, 'danger'),
 ]
 
-interp = tf.lite.Interpreter(model_path='models/model.tflite')
-interp.allocate_tensors()
-inp = interp.get_input_details()[0]
-out = interp.get_output_details()[0]
+model = tf.saved_model.load('models/saved_model')
+infer = model.signatures['serving_default']
+output_key = list(infer.structured_outputs.keys())[0]
 
-print("Float32 model verification:")
+print("saved_model verification:")
 all_pass = True
 for t, h, p, expected in test_vectors:
-    interp.set_tensor(inp['index'], norm(t, h, p))
-    interp.invoke()
-    scores = interp.get_tensor(out['index'])[0]
-    pred = CLASS_NAMES[np.argmax(scores)]
-    ok = pred == expected
+    result = infer(keras_tensor=tf.constant(norm(t, h, p)))
+    scores = result[output_key].numpy()[0]
+    pred = CLASS_NAMES[int(np.argmax(scores))]
+    conf = float(scores.max())
+    ok = (pred == expected) and (conf >= 0.90)
     all_pass = all_pass and ok
-    print(f"  {t}°C {h}% {p}hPa → {pred} (conf {scores.max():.2f}) {'✓' if ok else '✗ expected ' + expected}")
+    status = 'OK' if ok else 'FAIL (expected {}, conf {:.2f})'.format(expected, conf)
+    print(f"  {t}C {h}% {p}hPa -> {pred} (conf {conf:.2f}) {status}")
 
-print("All pass!" if all_pass else "FAILURES — retrain with more data")
+if all_pass:
+    print("All pass!")
+    sys.exit(0)
+else:
+    print("FAILURES -- retrain with more data or check CLASS_ORDER")
+    sys.exit(1)

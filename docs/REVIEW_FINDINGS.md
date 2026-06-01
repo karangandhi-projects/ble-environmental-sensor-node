@@ -25,6 +25,7 @@
 | A5 | `3a119d9` | DD-021 added — Option 1 (document why the existing access pattern on `s_conn_handle` / `s_ml_alert_subscribed` / `s_last_page` is safe on single-core ESP32-C3; no code change). `volatile` and `portMUX`-everywhere considered and rejected. README DD-range bumped to DD-021. |
 | (cleanup) | `e7b934b` | Backfilled the A5 row's SHA in this table (chicken-and-egg — closed-row was written before the commit landed). |
 | E1 | `0d9bcfa` | GitHub Actions CI added: `espressif/esp-idf-ci-action@v1` builds `firmware/` and `firmware/test_app/` (ESP-IDF v5.2.3, target esp32c3); Gradle `assembleDebug` for Android (JDK 17); ML TensorFlow smoke test (continue-on-error). Placeholder `workflows/README.md` deleted. |
+| B4+D1 | `PENDING` | Deleted dead ML artifacts (model_data.cc, model.tflite, model_quantized.tflite, quantize.py). Rewrote verify_model.py to test saved_model directly. Stripped .tflite output from train_classifier.py. Updated architecture.md ml/ block + .gitignore. |
 
 Plus 10 per-task Status-tick commits on the plan file itself (`ade0455`, `88079a2`, `c455be3`, `2281945`, `c1a2bdd`, `27b708d`, `d1896cd`, `5a37d88`, `6d362bc`, `0f2e5b9`), and one SHA-fixup commit (`3d0e118`) — making 21 session-3 commits total.
 
@@ -39,8 +40,10 @@ Plus 10 per-task Status-tick commits on the plan file itself (`ade0455`, `88079a
 
 **Resume point for next session:** all non-optional punch-list items are now closed. Remaining open work:
 1. **T11 (B2 path-a)** — retrain classifier + redeploy weights to resolve the saved_model-vs-deployed mismatch surfaced by session 2's B1. OPTIONAL; needs Python TF venv + on-target TC-ML-* re-verify. Plan task at `docs/superpowers/plans/2026-05-30-review-findings-cleanup.md` § T11.
-2. **B4 / D1** — wire up or delete the dead ML artefacts (`model_data.cc`, `model.tflite`, `model_quantized.tflite`, `saved_model/`). Couple with T11 or do as its own pass.
-3. **D2 / E1–E5** — long-tail items (hardcoded BLE static address, no CI, no host-runnable tests, no real-sensor validation, Android `onConnectionStateChange` robustness, extending `issues_encountered.md` with the Phase 8 / Phase 9 sagas). Each is its own plan.
+2. **B4 + D1 CLOSED** — dead ML artefacts deleted (`model_data.cc`, `model.tflite`, `model_quantized.tflite`, `quantize.py`); `verify_model.py` rewritten against `saved_model`; `train_classifier.py` stripped of TFLite output; `architecture.md` ml/ block updated; `.gitignore` covers `*.tflite`. Plan task T12 committed.
+3. **D2** — hardcoded BLE static address (plan task T13, needs approval).
+4. **E4** — Android `onConnectionStateChange` robustness (plan task T15, needs approval).
+5. **E2** — host-runnable tests (plan task T17, deferred).
 
 ---
 
@@ -192,7 +195,6 @@ The test's own header comment (lines 5-9) says this is intentional: a TDD **red*
 - **B1 [High] Deployed model can't be regenerated — `ml/extract_weights.py` does not exist.** The firmware runs float32 weights in `ml_weights.h`, whose header + `tinyml_inference.c:38` + `DD-018:199` + `architecture.md` + `tinyml_guide.md` (lines 345/492/494) all reference `extract_weights.py` to (re)generate them. The file is absent. `train_classifier.py:27` wrongly says `quantize.py` makes it (it only emits the unused int8 `model_data.cc`). **Fix:** add the real `extract_weights.py` (read `models/saved_model`, write the C float arrays) and fix the cross-refs. *Lesson: a model you can't regenerate from committed code, you don't really have.*
 - **B2 [High] Accuracy numbers disagree.** Deployed `ml_weights.h` header says **98.83%**; README:177 / `tinyml_inference.h:27` / `architecture.md:227` say **99.7%**. The flashed weights predate the cited dataset. **Fix:** reconcile to one number tied to the actual deployed weights.
 - **B3 [High / key lesson] "99.7%" measures box-separability, not skill.** `collect_synthetic.py` draws each class from disjoint uniform boxes; train/test are the same generator, so ~99% is trivial. The "379 real device samples" are human slider entries in the same boxes — not independent data. `RELEASE_NOTES:52` states the caveat correctly; **propagate that honesty everywhere** and stop leading with 99.7%. No real-sensor validation exists.
-- **B4 [Med] Dead ML artifacts presented as pipeline.** `firmware/components/tinyml_inference/model_data.cc` (int8) is **not compiled** (`CMakeLists.txt` lists only `tinyml_inference.c`). `ml/models/model.tflite` "for Android MlClassifier" is **unused** (no TFLite dep in the app — it just displays the device's `b7e00007` notification). `model_quantized.tflite`, `saved_model/` also dead. `verify_model.py` smoke-tests `model.tflite`, not the deployed `ml_weights.h` path. **Fix:** wire up or delete/label "reference only."
 
 ---
 
@@ -212,7 +214,6 @@ The test's own header comment (lines 5-9) says this is intentional: a TDD **red*
 
 ## D. Repo hygiene
 
-- **D1** Dead checked-in artifacts: `firmware/.../model_data.cc` (uncompiled), `ml/models/{model.tflite, model_quantized.tflite, saved_model/}` (none used by what ships). Small; more "implies a pipeline that isn't wired" than bloat. `.gitignore` `ml/models/` + a regenerate note, or keep only what's used.
 - **D2** Hardcoded BLE static address `0xC2:01:EF:BE:AD:DE` (`ble_env_service.c:494`) → every flashed unit shares one MAC. Fine for one PoC; `SECURITY.md:9` already flags it.
 - **D3** `.venv/`, `build/`, `.idea/`, `local.properties` correctly gitignored. (Good.)
 
