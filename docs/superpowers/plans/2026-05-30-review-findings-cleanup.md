@@ -70,7 +70,7 @@ git push
 | T12 | D     | Sonnet | B4 + D1    | `firmware/.../model_data.cc`, `ml/models/*.tflite`, `ml/verify_model.py`, `ml/README.md` or arch.md, REVIEW_FINDINGS | `- [x]` | `295295c` | B4 + D1 closed |
 | T13 | D     | Sonnet | D2         | `firmware/components/ble_env/ble_env_service.c`, `SECURITY.md`, REVIEW_FINDINGS | `- [x]` | `7f33400` | D2 closed |
 | T14 | D     | Sonnet | E1         | `.github/workflows/build.yml` (new), `.github/workflows/README.md` (delete), REVIEW_FINDINGS | `- [x]` | `0d9bcfa` | E1 closed |
-| T15 | D     | Sonnet | E4         | `android/.../BleRepository.kt`, `android/.../BleViewModel.kt`, REVIEW_FINDINGS | `- [ ]` | —      |       |
+| T15 | D     | Sonnet | E4         | `android/.../BleRepository.kt`, `android/.../BleViewModel.kt`, REVIEW_FINDINGS | `- [x]` | `ca1cffe` | E4 closed |
 | T16 | D     | Sonnet | E5         | `docs/issues_encountered.md`, REVIEW_FINDINGS                  | `- [x]` | `b0b503b` | E5 closed |
 | T17 | D     | Opus   | E2 (DEFERRED) | host test runner, mock ESP-IDF stubs, CI                    | `- [-]` | —      | DEFERRED — new infra, out of session budget |
 

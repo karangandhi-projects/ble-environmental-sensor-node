@@ -27,7 +27,7 @@
 | E1 | `0d9bcfa` | GitHub Actions CI added: `espressif/esp-idf-ci-action@v1` builds `firmware/` and `firmware/test_app/` (ESP-IDF v5.2.3, target esp32c3); Gradle `assembleDebug` for Android (JDK 17); ML TensorFlow smoke test (continue-on-error). Placeholder `workflows/README.md` deleted. |
 | B4+D1 | `295295c` | Deleted dead ML artifacts (model_data.cc, model.tflite, model_quantized.tflite, quantize.py). Rewrote verify_model.py to test saved_model directly. Stripped .tflite output from train_classifier.py. Updated architecture.md ml/ block + .gitignore. |
 | D2 | `7f33400` | BLE random-static address now derived per-device from esp_efuse_mac_get_default + top 2 bits set; SECURITY.md updated. Bonds from prior firmware invalidated — one-time re-pair required. |
-| E4 | `<sha>` | Android: onConnectionStateChange now checks GATT status; new DeviceState.Error / BluetoothOff / Connecting states; 10s connect timeout via mainHandler; BT adapter STATE_CHANGED receiver. Minimal UI chip handles new states. |
+| E4 | `ca1cffe` | Android: onConnectionStateChange now checks GATT status; new DeviceState.Error / BluetoothOff / Connecting states; 10s connect timeout via mainHandler; BT adapter STATE_CHANGED receiver. Minimal UI chip handles new states. |
 
 Plus 10 per-task Status-tick commits on the plan file itself (`ade0455`, `88079a2`, `c455be3`, `2281945`, `c1a2bdd`, `27b708d`, `d1896cd`, `5a37d88`, `6d362bc`, `0f2e5b9`), and one SHA-fixup commit (`3d0e118`) — making 21 session-3 commits total.
 
