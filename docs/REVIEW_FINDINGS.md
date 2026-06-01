@@ -24,7 +24,7 @@
 | C7 (full) | `6a55cb7` | `docs/principal_review_report.md` body replaced with a 4-line pointer stub at `docs/REVIEW_FINDINGS.md`. The SUPERSEDED banner added in `08d6420` (session 2) wasn't enough — the body still narrated stale facts. |
 | A5 | `3a119d9` | DD-021 added — Option 1 (document why the existing access pattern on `s_conn_handle` / `s_ml_alert_subscribed` / `s_last_page` is safe on single-core ESP32-C3; no code change). `volatile` and `portMUX`-everywhere considered and rejected. README DD-range bumped to DD-021. |
 | (cleanup) | `e7b934b` | Backfilled the A5 row's SHA in this table (chicken-and-egg — closed-row was written before the commit landed). |
-| E1 | TBD | GitHub Actions CI added: `espressif/esp-idf-ci-action@v1` builds `firmware/` and `firmware/test_app/` (ESP-IDF v5.2.3, target esp32c3); Gradle `assembleDebug` for Android (JDK 17); ML TensorFlow smoke test (continue-on-error). Placeholder `workflows/README.md` deleted. |
+| E1 | `0d9bcfa` | GitHub Actions CI added: `espressif/esp-idf-ci-action@v1` builds `firmware/` and `firmware/test_app/` (ESP-IDF v5.2.3, target esp32c3); Gradle `assembleDebug` for Android (JDK 17); ML TensorFlow smoke test (continue-on-error). Placeholder `workflows/README.md` deleted. |
 
 Plus 10 per-task Status-tick commits on the plan file itself (`ade0455`, `88079a2`, `c455be3`, `2281945`, `c1a2bdd`, `27b708d`, `d1896cd`, `5a37d88`, `6d362bc`, `0f2e5b9`), and one SHA-fixup commit (`3d0e118`) — making 21 session-3 commits total.
 
