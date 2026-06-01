@@ -1,9 +1,30 @@
 # Independent Review Findings & Fix Log
 
-**Date:** 2026-05-29 (created); last updated 2026-06-01 end-of-session-4.
-**Branch:** main (HEAD = post-session-4; session-4 added 12 commits — 5 work, 5 plan-tick, 1 SHA-backfill, 1 plan-extension; total since file creation: 40 commits across 4 sessions).
+**Date:** 2026-05-29 (created); last updated 2026-06-01 end-of-session-5.
+**Branch:** main (HEAD = post-session-5; session-5 was a single on-target verification pass, no code changes; sessions 1-4 added 40 commits, session 5 adds this doc update).
 **Reviewer:** principal-level pass (independent of `docs/principal_review_report.md`, retired to a pointer stub in session 3 — C7).
 **Purpose:** Durable record of issues found, what's verified on hardware, and what needs fixing. Safe to resume from this file in a new session.
+
+---
+
+## Session 2026-06-01 (evening, session 5) — on-target verification pass
+
+**No code changes this session.** Closed out the on-target verifications that had been carried over from sessions 2-4 (A1, A4+DD-021, D2). Board: ESP32-C3 on `/dev/ttyACM0`. Firmware `0x95d60` flashed from current `main` HEAD (no rebuild between gates).
+
+| Verification | TC | Outcome |
+|---|---|---|
+| Unity re-run after D2's `ble_env_service.c` touch | — | `62 Tests / 0 Failures / 1 Ignored / OK` |
+| D2 — per-device random-static address | TC-SEC-05 | Advertised MAC differs from old hardcoded `C2:01:EF:BE:AD:DE`; MITM passkey pair from a freshly-cleared phone bond succeeded; `Encryption established`. |
+| D2 — bond reconnect across reboot | TC-SEC-06 | After hard reset, reconnect with no passkey prompt (eFuse MAC is stable across boots → bond key still resolves). |
+| A1 — deferred NVS write behaviour-preserving | TC-010 | Wrote Configuration `01 00 E8 03` (interval 1000 ms); notification cadence changed to ~1 Hz without visible write stall. |
+| A1 — config persistence across reboot | TC-012 | Hard-reset board, reconnected bonded, read Configuration → `01 00 E8 03` (interval persisted). Confirms the dirty-flag drain in `telemetry_task` reaches NVS before next boot. |
+| A4 — checked `ble_gap_conn_find` rc + DD-021 shared-static access | TC-009 | Disconnect/reconnect/notify-subscribe cycle ×3-4 with OLED page rotation running concurrently. ADV resumed cleanly after every disconnect; no GATT 133/8/19 on any reconnect; page rotation stayed smooth (s_last_page coherent under churn). |
+
+> Note: REVIEW_FINDINGS sessions 2-4 referred to "TC-006 (write report interval) + TC-011 (reboot persistence)" for A1, but the canonical IDs in `docs/test_plan.md` are **TC-010** (Config Write Valid) and **TC-012** (Persistence). TC-011 in the matrix is the *invalid* config write (negative test). Recorded here for future readers; no action needed.
+
+All four blocking on-target verifications now closed. The only remaining "✅ Verified" gaps are TC-011 (negative — invalid config rejection) and the Phase 9 TC-ML-* class boundaries; both were already Pass in the matrix and were not affected by sessions 2-4 commits.
+
+**Resume point unchanged from session 4:** the three deferred/optional items (T11 / T17 / E3) are the only remaining open work. See the session-4 wrap below for the breakdown.
 
 ---
 
@@ -23,11 +44,11 @@ Plus 5 per-task Status-tick commits on the plan file (`feec25a`, `61f1d75`, `444
 
 **Build state at end of session:** firmware `0x95d60` (was `0x95d50` at session-4 start; +16 B net, all from D2's eFuse MAC read). test_app `0x373c0` (unchanged, links green). Android `./gradlew assembleDebug` green in ~26 s. No on-target re-verify done this session.
 
-**Pending on-target verifications carried over from sessions 2 + 3 + 4:**
-- TC-006 (write report interval) + TC-011 (reboot persistence) — confirms session 2's A1 deferred NVS write is behaviour-preserving.
-- TC-009 (notify subscribe/unsubscribe across reconnects) — confirms session 3's A4 added branch + DD-021 reasoning hold under real BLE traffic.
-- TC-SEC-05/06 (MITM Passkey Display) on a fresh phone — session 4's D2 changed the MAC so existing bonds are invalid; bond + pair from scratch.
-- All 62 Unity tests (`62 Tests / 0 Failures / 1 Ignored`) — re-run after this session's `ble_env_service.c` touch (D2).
+**Pending on-target verifications carried over from sessions 2 + 3 + 4:** ✅ all closed in session 5 — see the session-5 wrap above. Original carry-over list (kept for traceability):
+- ~~TC-006 (write report interval) + TC-011 (reboot persistence)~~ → done as TC-010 + TC-012 (correct IDs per test_plan.md).
+- ~~TC-009 (notify subscribe/unsubscribe across reconnects)~~ → done, A4 + DD-021 hold under churn.
+- ~~TC-SEC-05/06 (MITM Passkey Display) on a fresh phone~~ → done, MAC differs from old hardcoded; pair + bond reconnect both clean.
+- ~~All 62 Unity tests~~ → done, `62 / 0 / 1 / OK` after D2's touch.
 
 **Resume point for next session:** All medium/high punch-list items are now closed. Remaining open work is entirely optional or hardware-bound:
 1. **T11 (B2 path-a)** — retrain classifier + redeploy weights to resolve the saved_model-vs-deployed mismatch surfaced in session 2's B1. OPTIONAL; needs Python TF venv + on-target TC-ML-* re-verify. Plan task at `docs/superpowers/plans/2026-05-30-review-findings-cleanup.md` § T11.
