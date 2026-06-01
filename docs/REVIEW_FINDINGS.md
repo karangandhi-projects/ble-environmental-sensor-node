@@ -1,15 +1,51 @@
 # Independent Review Findings & Fix Log
 
-**Date:** 2026-05-29 (created); last updated 2026-05-30 end-of-session-2.
-**Branch:** main (HEAD `aa79796` after session 2 — all 10 fix commits pushed to origin).
-**Reviewer:** principal-level pass (independent of `docs/principal_review_report.md`, now retired to a pointer stub).
+**Date:** 2026-05-29 (created); last updated 2026-06-01 end-of-session-3.
+**Branch:** main (HEAD `e7b934b` after session 3 — all 21 session-3 commits pushed to origin; total since file creation: 28 commits).
+**Reviewer:** principal-level pass (independent of `docs/principal_review_report.md`, retired to a pointer stub in session 3 — C7).
 **Purpose:** Durable record of issues found, what's verified on hardware, and what needs fixing. Safe to resume from this file in a new session.
 
 ---
 
-## Session 2026-05-30 — wrap & resume point
+## Session 2026-06-01 — wrap & resume point
 
-**Closed this session (11 items, 8 commits all pushed):**
+**Closed this session (10 punch-list items, 21 commits all pushed):** the remaining open items — A2, A3, A4, A5, A6, A7, B5, C5, C6, C7-full — executed via plan-driven multi-subagent dispatch from `docs/superpowers/plans/2026-05-30-review-findings-cleanup.md`. One Opus orchestrator + Haiku subagents for mechanical doc edits (T1, T2) + Sonnet subagents for the bulk (T3–T9) + a Sonnet executor for the A5 DD-021 write-up (decision made by the Opus orchestrator after reading the three sites). Each task = one work commit + one Status-tick commit, both pushed before the next task started — full per-task resume safety across `/clear` and session boundaries.
+
+| Item | Commit | Summary |
+|---|---|---|
+| A7 | `449efdd` | sensor_provider.c header @par drift comment "±2 hPa" → "±4 hPa" to match code (`press_drift = ((t % 5) - 2) * 200` → ±400 Pa) and the inline comment on line 61. |
+| C5 | `d4463cc` | requirements.md FR-011 page spec aligned with implementation: {temperature, humidity, pressure} @ 2000 ms each + persistent BLE-state badge (was {state, temp, humidity} @ 3000/1500/1500 ms). |
+| A2 | `baa6403` | README override paragraph corrected — `SIM` badge stays on for override readings (matches sensor_provider.c setting `simulated=true` for override too); only a real on-board BME280/BMP280 driver will clear it. |
+| A3 | `2ac5825` | README sensor-status paragraph: default sim is near-constant (≈24.5°C / 52% RH / 1013 hPa, sub-degree variation); realistic ±2°C / ±2% / ±4 hPa drift only happens under override. |
+| C6 | `49d0f0f` | architecture.md: single canonical 5-component Module Layout (tinyml_inference inline) at the top; "Phase 9 Extensions — Component Map" subsection collapsed to a pointer up. Stale "display TBD — Phase 1.5" removed; dependency-graph sentence bumped to 5 components. |
+| A4 | `178f180` | `gap_event_cb`: `ble_gap_conn_find` return now checked; on failure log + fall through to "assume unbonded → initiate pairing" instead of using uninitialized `_desc.peer_id_addr`. Firmware +160 B (new `ESP_LOGW` string). |
+| A6 | `294bf6b` | Deleted `BLE_ENV_CONN_ITVL_MIN/MAX_UNITS`, `BLE_ENV_CONN_LATENCY`, `BLE_ENV_CONN_SUPERVISION_UNITS` from app_config.h; DD-015 + power_budget.md updated — firmware does not call `ble_gap_update_params()` (removed during Phase 8 pairing debug). |
+| B5 | `85571ca` | Deleted `ML_AE_We/be/Wd/bd` arrays + `ML_AE_HIDDEN_SIZE` + `ML_ANOMALY_THRESHOLD` from ml_weights.h (DD-019 made them dead). `extract_weights.py` simplified to no longer preserve them. Binary size unchanged — linker `--gc-sections` had already stripped them. |
+| C7 (full) | `6a55cb7` | `docs/principal_review_report.md` body replaced with a 4-line pointer stub at `docs/REVIEW_FINDINGS.md`. The SUPERSEDED banner added in `08d6420` (session 2) wasn't enough — the body still narrated stale facts. |
+| A5 | `3a119d9` | DD-021 added — Option 1 (document why the existing access pattern on `s_conn_handle` / `s_ml_alert_subscribed` / `s_last_page` is safe on single-core ESP32-C3; no code change). `volatile` and `portMUX`-everywhere considered and rejected. README DD-range bumped to DD-021. |
+| (cleanup) | `e7b934b` | Backfilled the A5 row's SHA in this table (chicken-and-egg — closed-row was written before the commit landed). |
+
+Plus 10 per-task Status-tick commits on the plan file itself (`ade0455`, `88079a2`, `c455be3`, `2281945`, `c1a2bdd`, `27b708d`, `d1896cd`, `5a37d88`, `6d362bc`, `0f2e5b9`), and one SHA-fixup commit (`3d0e118`) — making 21 session-3 commits total.
+
+**Build state at end of session:** firmware `0x95d50` (was `0x95cb0` at session-3 start; +160 B net, all from A4's log string — A6 deleted preprocessor constants (zero bytes), B5's AE arrays were already linker-stripped). test_app `0x373c0` (unchanged, links green). No on-target re-verify done this session.
+
+**New DD this session:** DD-021 in `docs/design_decisions.md` (shared-static access pattern on single-core ESP32-C3 — single-word atomic; check-then-use races inherent and bounded; multi-field locks belong to compound state, not single-word).
+
+**Pending on-target verifications carried over from sessions 2 + 3:**
+- TC-006 (write report interval) + TC-011 (reboot persistence) — confirms session 2's A1 deferred NVS write is behaviour-preserving.
+- TC-009 (notify subscribe/unsubscribe across reconnects) — confirms session 3's A4 added branch + DD-021 reasoning hold under real BLE traffic.
+- All 62 Unity tests (`62 Tests / 0 Failures / 1 Ignored`) — re-run after the env_sensor / ble_env / app_core / tinyml_inference touches in this session.
+
+**Resume point for next session:** all non-optional punch-list items are now closed. Remaining open work:
+1. **T11 (B2 path-a)** — retrain classifier + redeploy weights to resolve the saved_model-vs-deployed mismatch surfaced by session 2's B1. OPTIONAL; needs Python TF venv + on-target TC-ML-* re-verify. Plan task at `docs/superpowers/plans/2026-05-30-review-findings-cleanup.md` § T11.
+2. **B4 / D1** — wire up or delete the dead ML artefacts (`model_data.cc`, `model.tflite`, `model_quantized.tflite`, `saved_model/`). Couple with T11 or do as its own pass.
+3. **D2 / E1–E5** — long-tail items (hardcoded BLE static address, no CI, no host-runnable tests, no real-sensor validation, Android `onConnectionStateChange` robustness, extending `issues_encountered.md` with the Phase 8 / Phase 9 sagas). Each is its own plan.
+
+---
+
+## Session 2026-05-30 — wrap (historical)
+
+**Closed this session (10 items, 7 commits all pushed):**
 
 | Item | Commit | Summary |
 |---|---|---|
@@ -21,20 +57,8 @@
 | A1 | `a3ef354` | Deferred `storage_config_save()` out of `gatt_access_cb` via a dirty-flag mirror of `force_sample` — NVS write now runs in `telemetry_task` after notify. Firmware +304 B; test_app unchanged. |
 | C3 | `3b8acc2` | Reconciled binary size to `0x95cb0`, Unity to 62 / 0 / 1, manual to 24/25 + 1 Obsolete across README / RELEASE_NOTES / build_and_flash.md / tinyml_guide.md / implementation_plan.md. |
 | C4 | `aa79796` | Fixed RELEASE_NOTES DD cross-refs (DD-001/002/003/004/015 all mislabeled), `model_data.h` → `ml_weights.h`, "IRAM" → flash `.rodata`, "20-entry history" → `take(50)`. |
-| C5 | `14aa84a` | requirements.md FR-011 page spec aligned with implementation: {temp, humidity, pressure} @ 2000 ms + persistent state badge. |
-| A7 | — (pending commit) | sensor_provider.c header "±2 hPa" → "±4 hPa" to match code (±400 Pa) and the inline comment. |
-| A2 | `baa6403` | README override paragraph corrected — SIM badge stays on (matches sensor_provider.c setting simulated=true for override). |
-| A3 | `2ac5825` | README sensor-status paragraph: default sim is near-constant; realistic drift exists only under override. |
-| C6 | `49d0f0f` | architecture.md: single canonical 5-component Module Layout; Phase 9 Extensions subsection collapsed to a pointer up. Stale "display TBD" removed. |
-| A4 | `178f180` | ble_gap_conn_find rc checked; on failure log + fall through to "assume unbonded → initiate pairing". |
-| A6 | `294bf6b` | Deleted BLE_ENV_CONN_* dead constants from app_config.h; DD-015 + power_budget.md updated — we no longer call ble_gap_update_params. |
-| B5 | `85571ca` | Deleted ML_AE_* arrays + ML_AE_HIDDEN_SIZE + ML_ANOMALY_THRESHOLD from ml_weights.h (DD-019 made them dead). extract_weights.py simplified. |
-| C7 (full) | `6a55cb7` | docs/principal_review_report.md body replaced with a 4-line pointer stub. SUPERSEDED banner no longer needed — the body is gone. |
-| A5 | `3a119d9` | DD-021 added — Option 1 (document why the existing access pattern is safe on single-core ESP32-C3; no code change). |
 
-**Build state at end of session:** firmware `0x95cb0` (post-A1; was `0x95b80` pre-A1 — last on-target verified), test_app `0x373c0` (unchanged, links green). No on-target re-verify done this session — should re-flash and confirm `62 Tests / 0 Failures / 1 Ignored` plus a Config write (TC-006) and reboot-persistence check (TC-011) to confirm A1 is behaviour-preserving.
-
-**Resume point for next session:** start at the "Remaining punch-list (next-pickup)" section below. Top of that list is **B2 path-a follow-up** (retrain + redeploy to fix the saved_model-vs-deployed mismatch) if you want a high-impact follow-up; otherwise pick from A2–A7 / B5 / C5 / C6 / C7-full / D / E (all small).
+**Build state at end of session 2:** firmware `0x95cb0` (post-A1; was `0x95b80` pre-A1), test_app `0x373c0`. On-target re-verify for A1 carried forward to session 3 (now combined with the session 3 verifications above).
 
 ---
 
