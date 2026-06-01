@@ -28,13 +28,16 @@ fun DashboardScreen(vm: BleViewModel) {
     val canReconnect by vm.canReconnect.collectAsState()
 
     val connectionLabel = when (val s = deviceState) {
-        is DeviceState.Connected -> when {
+        is DeviceState.Connected    -> when {
             s.pairing               -> "● pairing — check device display for PIN"
             s.bonded && s.encrypted -> "● bonded + encrypted"
             else                    -> "● connected"
         }
-        is DeviceState.Scanning  -> "◌ scanning"
-        else -> "○ disconnected"
+        is DeviceState.Scanning     -> "◌ scanning"
+        is DeviceState.Connecting   -> "◌ connecting…"
+        is DeviceState.BluetoothOff -> "✕ bluetooth off"
+        is DeviceState.Error        -> "✕ error ${s.gattStatus}"
+        else                        -> "○ disconnected"
     }
 
     Column(Modifier.fillMaxSize().padding(16.dp)) {

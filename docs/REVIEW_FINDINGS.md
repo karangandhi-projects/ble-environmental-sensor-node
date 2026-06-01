@@ -27,6 +27,7 @@
 | E1 | `0d9bcfa` | GitHub Actions CI added: `espressif/esp-idf-ci-action@v1` builds `firmware/` and `firmware/test_app/` (ESP-IDF v5.2.3, target esp32c3); Gradle `assembleDebug` for Android (JDK 17); ML TensorFlow smoke test (continue-on-error). Placeholder `workflows/README.md` deleted. |
 | B4+D1 | `295295c` | Deleted dead ML artifacts (model_data.cc, model.tflite, model_quantized.tflite, quantize.py). Rewrote verify_model.py to test saved_model directly. Stripped .tflite output from train_classifier.py. Updated architecture.md ml/ block + .gitignore. |
 | D2 | `7f33400` | BLE random-static address now derived per-device from esp_efuse_mac_get_default + top 2 bits set; SECURITY.md updated. Bonds from prior firmware invalidated — one-time re-pair required. |
+| E4 | `<sha>` | Android: onConnectionStateChange now checks GATT status; new DeviceState.Error / BluetoothOff / Connecting states; 10s connect timeout via mainHandler; BT adapter STATE_CHANGED receiver. Minimal UI chip handles new states. |
 
 Plus 10 per-task Status-tick commits on the plan file itself (`ade0455`, `88079a2`, `c455be3`, `2281945`, `c1a2bdd`, `27b708d`, `d1896cd`, `5a37d88`, `6d362bc`, `0f2e5b9`), and one SHA-fixup commit (`3d0e118`) — making 21 session-3 commits total.
 
@@ -43,7 +44,7 @@ Plus 10 per-task Status-tick commits on the plan file itself (`ade0455`, `88079a
 1. **T11 (B2 path-a)** — retrain classifier + redeploy weights to resolve the saved_model-vs-deployed mismatch surfaced by session 2's B1. OPTIONAL; needs Python TF venv + on-target TC-ML-* re-verify. Plan task at `docs/superpowers/plans/2026-05-30-review-findings-cleanup.md` § T11.
 2. **B4 + D1 CLOSED** — dead ML artefacts deleted (`model_data.cc`, `model.tflite`, `model_quantized.tflite`, `quantize.py`); `verify_model.py` rewritten against `saved_model`; `train_classifier.py` stripped of TFLite output; `architecture.md` ml/ block updated; `.gitignore` covers `*.tflite`. Plan task T12 committed.
 3. **D2 CLOSED** — per-device eFuse-derived random-static BLE address; SECURITY.md updated; plan task T13 committed.
-4. **E4** — Android `onConnectionStateChange` robustness (plan task T15, needs approval).
+4. **E4 CLOSED** — Android `onConnectionStateChange` now checks GATT status (133/8/19 → DeviceState.Error); DeviceState gains Connecting / BluetoothOff / Error; 10s connect timeout; BT adapter receiver; minimal UI chip on ScanScreen. Plan task T15 committed.
 5. **E2** — host-runnable tests (plan task T17, deferred).
 
 ---
@@ -223,7 +224,6 @@ The test's own header comment (lines 5-9) says this is intentional: a TDD **red*
 
 - **E2 No host-runnable tests.** All Unity tests require on-target flashing → can't cheaply gate a PR. Formatters/encoders/`tinyml_infer` are pure C and could run on host in ms. (Missing leg of the TDD setup.)
 - **E3 No real-sensor validation.** Entire ML headline untested on real data (on roadmap; mark accuracy provisional).
-- **E4 Android robustness.** `onConnectionStateChange` ignores GATT `status` (133 errors); no Bluetooth-off UX; no connect timeout.
 - **E5 Extend `issues_encountered.md`.** ~~Closed session 4 (E5): Issue 10 (Phase 8 pairing saga — Just Works → MITM Passkey Display, ENC_CHANGE race, Security Request timer rejection) and Issue 11 (Phase 9 ML pivot — autoencoder replaced by confidence thresholding, DD-019) appended to `docs/issues_encountered.md`.~~
 
 ---

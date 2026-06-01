@@ -31,6 +31,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import androidx.core.content.ContextCompat
 import com.bleenvnode.model.*
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -64,6 +66,11 @@ class BleRepository(private val context: Context) {
     private val cccdQueue = ArrayDeque<java.util.UUID>()
     private var cccdBusy = false
 
+    /* Connect timeout — 10 s after connectGatt; fires DeviceState.Error if still Connecting. */
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private var connectTimeoutRunnable: Runnable? = null
+    private val connectTimeoutMs = 10_000L
+
     private val bondReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             if (intent.action != BluetoothDevice.ACTION_BOND_STATE_CHANGED) return
@@ -84,6 +91,28 @@ class BleRepository(private val context: Context) {
         }
     }
 
+    private val bluetoothStateReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (intent.action != BluetoothAdapter.ACTION_STATE_CHANGED) return
+            when (intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, -1)) {
+                BluetoothAdapter.STATE_OFF -> {
+                    cancelConnectTimeout()
+                    gatt?.close()
+                    gatt = null
+                    cccdQueue.clear()
+                    cccdBusy = false
+                    mlAlertSubscribed.value = false
+                    deviceState.value = DeviceState.BluetoothOff
+                }
+                BluetoothAdapter.STATE_ON -> {
+                    if (deviceState.value is DeviceState.BluetoothOff) {
+                        deviceState.value = DeviceState.Disconnected
+                    }
+                }
+            }
+        }
+    }
+
     init {
         ContextCompat.registerReceiver(
             context,
@@ -91,10 +120,17 @@ class BleRepository(private val context: Context) {
             IntentFilter(BluetoothDevice.ACTION_BOND_STATE_CHANGED),
             ContextCompat.RECEIVER_NOT_EXPORTED
         )
+        ContextCompat.registerReceiver(
+            context,
+            bluetoothStateReceiver,
+            IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED),
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
     }
 
     fun unregister() {
         try { context.unregisterReceiver(bondReceiver) } catch (_: Exception) {}
+        try { context.unregisterReceiver(bluetoothStateReceiver) } catch (_: Exception) {}
     }
 
     private val scanCallback = object : ScanCallback() {
@@ -125,7 +161,9 @@ class BleRepository(private val context: Context) {
     fun connect(device: BluetoothDevice) {
         lastDevice = device
         stopScan()
+        deviceState.value = DeviceState.Connecting
         gatt = device.connectGatt(context, false, gattCallback, BluetoothDevice.TRANSPORT_LE)
+        scheduleConnectTimeout()
     }
 
     fun disconnect() {
@@ -151,14 +189,44 @@ class BleRepository(private val context: Context) {
         }
     }
 
+    private fun scheduleConnectTimeout() {
+        cancelConnectTimeout()
+        connectTimeoutRunnable = Runnable {
+            if (deviceState.value is DeviceState.Connecting) {
+                gatt?.close()
+                gatt = null
+                deviceState.value = DeviceState.Error(-1, "Connect timeout (10s)")
+            }
+        }.also { mainHandler.postDelayed(it, connectTimeoutMs) }
+    }
+
+    private fun cancelConnectTimeout() {
+        connectTimeoutRunnable?.let { mainHandler.removeCallbacks(it) }
+        connectTimeoutRunnable = null
+    }
+
     private val gattCallback = object : BluetoothGattCallback() {
         override fun onConnectionStateChange(g: BluetoothGatt, status: Int, newState: Int) {
+            if (status != BluetoothGatt.GATT_SUCCESS) {
+                /* Common: 133 (0x85) transient connect error, 8 supervision timeout,
+                 * 19 peer terminated. Treat all as Error — distinct from a clean disconnect. */
+                cancelConnectTimeout()
+                g.close()
+                gatt = null
+                cccdQueue.clear()
+                cccdBusy = false
+                mlAlertSubscribed.value = false
+                deviceState.value = DeviceState.Error(status)
+                return
+            }
             when (newState) {
                 BluetoothProfile.STATE_CONNECTED -> {
+                    cancelConnectTimeout()
                     refreshGattCache()
                     g.discoverServices()
                 }
                 BluetoothProfile.STATE_DISCONNECTED -> {
+                    cancelConnectTimeout()
                     deviceState.value = DeviceState.Disconnected
                     mlAlertSubscribed.value = false
                     cccdQueue.clear()
