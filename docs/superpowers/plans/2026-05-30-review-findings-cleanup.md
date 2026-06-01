@@ -67,7 +67,7 @@ git push
 | T9  | B     | Sonnet | C7 (full)  | `docs/principal_review_report.md`                             | `- [x]` | `6a55cb7` | C7 closed |
 | T10 | C     | Opus   | A5         | `ble_env_service.c`, `display.c`, `design_decisions.md`       | `- [x]` | `3a119d9` | A5 closed via DD-021 (Option 1) |
 | T11 | C     | Opus   | B2 path-a (OPTIONAL) | `ml/`, `ml_weights.h`, README, RELEASE_NOTES         | `- [-]` | —      | DEFERRED — optional retrain, needs HW re-verify of TC-ML-* |
-| T12 | D     | Sonnet | B4 + D1    | `firmware/.../model_data.cc`, `ml/models/*.tflite`, `ml/verify_model.py`, `ml/README.md` or arch.md, REVIEW_FINDINGS | `- [ ]` | —      |       |
+| T12 | D     | Sonnet | B4 + D1    | `firmware/.../model_data.cc`, `ml/models/*.tflite`, `ml/verify_model.py`, `ml/README.md` or arch.md, REVIEW_FINDINGS | `- [x]` | `295295c` | B4 + D1 closed |
 | T13 | D     | Sonnet | D2         | `firmware/components/ble_env/ble_env_service.c`, `SECURITY.md`, REVIEW_FINDINGS | `- [ ]` | —      |       |
 | T14 | D     | Sonnet | E1         | `.github/workflows/build.yml` (new), `.github/workflows/README.md` (delete), REVIEW_FINDINGS | `- [x]` | `0d9bcfa` | E1 closed |
 | T15 | D     | Sonnet | E4         | `android/.../BleRepository.kt`, `android/.../BleViewModel.kt`, REVIEW_FINDINGS | `- [ ]` | —      |       |
