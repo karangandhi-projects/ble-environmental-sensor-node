@@ -1,13 +1,42 @@
 # Independent Review Findings & Fix Log
 
-**Date:** 2026-05-29 (created); last updated 2026-06-01 end-of-session-3.
-**Branch:** main (HEAD `e7b934b` after session 3 — all 21 session-3 commits pushed to origin; total since file creation: 28 commits).
+**Date:** 2026-05-29 (created); last updated 2026-06-01 end-of-session-4.
+**Branch:** main (HEAD = post-session-4; session-4 added 12 commits — 5 work, 5 plan-tick, 1 SHA-backfill, 1 plan-extension; total since file creation: 40 commits across 4 sessions).
 **Reviewer:** principal-level pass (independent of `docs/principal_review_report.md`, retired to a pointer stub in session 3 — C7).
 **Purpose:** Durable record of issues found, what's verified on hardware, and what needs fixing. Safe to resume from this file in a new session.
 
 ---
 
-## Session 2026-06-01 — wrap & resume point
+## Session 2026-06-01 (afternoon, Phase D) — wrap & resume point
+
+**Closed this session (5 punch-list items, 12 commits all pushed):** E5, E1, B4+D1, D2, E4 — the entire Phase D long tail from `docs/superpowers/plans/2026-05-30-review-findings-cleanup.md`. One Opus orchestrator + five Sonnet implementer subagents (one per task, fresh context each). Same per-task atomicity as session 3: each task = work commit + plan Status-tick commit, both pushed before the next task started. Plan extension commit (`56608a7`) added Phase D rows up front so any `/clear` mid-pass would resume cleanly.
+
+| Item | Commit | Summary |
+|---|---|---|
+| E5 | `b0b503b` | `docs/issues_encountered.md` extended past Issue 9 (Phase 2): Issue 10 — Phase 8 pairing saga (root causes: `ble_store_config_init()` never called + NimBLE host task stack 4096→8192 B for SC ECDH; why `ble_gap_update_params()` was permanently removed for ENC_CHANGE race; why Security Request timer is permanently banned). Issue 11 — Phase 9 ML pivot (AE on comfortable-only was a category error → `max(softmax) < 0.5 → ANOMALY` per DD-019). |
+| E1 | `0d9bcfa` | GitHub Actions CI added: `espressif/esp-idf-ci-action@v1` builds `firmware/` + `firmware/test_app/` (ESP-IDF v5.2.3, target esp32c3); Gradle `assembleDebug` for Android (JDK 17); ML TensorFlow smoke test (continue-on-error). Placeholder `workflows/README.md` deleted. |
+| B4+D1 | `295295c` | Deleted dead ML artifacts (`model_data.cc`, `model.tflite`, `model_quantized.tflite`, `quantize.py`). Rewrote `verify_model.py` to test `saved_model` directly via `tf.saved_model.load`. Stripped TFLite output from `train_classifier.py`. Updated `architecture.md` ml/ block + `.gitignore` (covers `ml/models/*.tflite`). Canonical retrain loop is now `collect_synthetic.py → train_classifier.py → saved_model/ → extract_weights.py → ml_weights.h`. Firmware byte-identical (model_data.cc was never compiled). |
+| D2 | `7f33400` | BLE random-static address now derived per-device from `esp_efuse_mac_get_default()` + top 2 bits set (BT spec); SECURITY.md updated. Bonds from prior firmware invalidated — one-time re-pair required. Firmware +16 B. |
+| E4 | `ca1cffe` | Android: `onConnectionStateChange` now checks GATT status (133/8/19 → `DeviceState.Error`, not silent disconnect); `DeviceState` gains `Connecting` / `BluetoothOff` / `Error(gattStatus, msg)`; 10 s connect timeout via `Handler`; `BluetoothAdapter.ACTION_STATE_CHANGED` receiver. Minimal UI chip on `ScanScreen` + `DashboardScreen` for the new states. Gradle build green, lint flat vs baseline. |
+
+Plus 5 per-task Status-tick commits on the plan file (`feec25a`, `61f1d75`, `4448320`, `9f2c187`, `6dda402`), one SHA-backfill (`dc11ffe`), and the Phase D plan extension (`56608a7`) — 12 session-4 commits total.
+
+**Build state at end of session:** firmware `0x95d60` (was `0x95d50` at session-4 start; +16 B net, all from D2's eFuse MAC read). test_app `0x373c0` (unchanged, links green). Android `./gradlew assembleDebug` green in ~26 s. No on-target re-verify done this session.
+
+**Pending on-target verifications carried over from sessions 2 + 3 + 4:**
+- TC-006 (write report interval) + TC-011 (reboot persistence) — confirms session 2's A1 deferred NVS write is behaviour-preserving.
+- TC-009 (notify subscribe/unsubscribe across reconnects) — confirms session 3's A4 added branch + DD-021 reasoning hold under real BLE traffic.
+- TC-SEC-05/06 (MITM Passkey Display) on a fresh phone — session 4's D2 changed the MAC so existing bonds are invalid; bond + pair from scratch.
+- All 62 Unity tests (`62 Tests / 0 Failures / 1 Ignored`) — re-run after this session's `ble_env_service.c` touch (D2).
+
+**Resume point for next session:** All medium/high punch-list items are now closed. Remaining open work is entirely optional or hardware-bound:
+1. **T11 (B2 path-a)** — retrain classifier + redeploy weights to resolve the saved_model-vs-deployed mismatch surfaced in session 2's B1. OPTIONAL; needs Python TF venv + on-target TC-ML-* re-verify. Plan task at `docs/superpowers/plans/2026-05-30-review-findings-cleanup.md` § T11.
+2. **T17 (E2)** — host-runnable tests for pure-C modules (encoders, validators, formatters). New infrastructure: mock ESP-IDF/FreeRTOS stubs, host CMake target, CI integration. DEFERRED — beyond a single-session budget; tracked in plan § T17.
+3. **E3** — real-sensor validation on a physical BME280/BMP280. SKIPPED — requires hardware that isn't in this rig.
+
+---
+
+## Session 2026-06-01 (morning) — wrap (historical)
 
 **Closed this session (10 punch-list items, 21 commits all pushed):** the remaining open items — A2, A3, A4, A5, A6, A7, B5, C5, C6, C7-full — executed via plan-driven multi-subagent dispatch from `docs/superpowers/plans/2026-05-30-review-findings-cleanup.md`. One Opus orchestrator + Haiku subagents for mechanical doc edits (T1, T2) + Sonnet subagents for the bulk (T3–T9) + a Sonnet executor for the A5 DD-021 write-up (decision made by the Opus orchestrator after reading the three sites). Each task = one work commit + one Status-tick commit, both pushed before the next task started — full per-task resume safety across `/clear` and session boundaries.
 
@@ -24,28 +53,12 @@
 | C7 (full) | `6a55cb7` | `docs/principal_review_report.md` body replaced with a 4-line pointer stub at `docs/REVIEW_FINDINGS.md`. The SUPERSEDED banner added in `08d6420` (session 2) wasn't enough — the body still narrated stale facts. |
 | A5 | `3a119d9` | DD-021 added — Option 1 (document why the existing access pattern on `s_conn_handle` / `s_ml_alert_subscribed` / `s_last_page` is safe on single-core ESP32-C3; no code change). `volatile` and `portMUX`-everywhere considered and rejected. README DD-range bumped to DD-021. |
 | (cleanup) | `e7b934b` | Backfilled the A5 row's SHA in this table (chicken-and-egg — closed-row was written before the commit landed). |
-| E1 | `0d9bcfa` | GitHub Actions CI added: `espressif/esp-idf-ci-action@v1` builds `firmware/` and `firmware/test_app/` (ESP-IDF v5.2.3, target esp32c3); Gradle `assembleDebug` for Android (JDK 17); ML TensorFlow smoke test (continue-on-error). Placeholder `workflows/README.md` deleted. |
-| B4+D1 | `295295c` | Deleted dead ML artifacts (model_data.cc, model.tflite, model_quantized.tflite, quantize.py). Rewrote verify_model.py to test saved_model directly. Stripped .tflite output from train_classifier.py. Updated architecture.md ml/ block + .gitignore. |
-| D2 | `7f33400` | BLE random-static address now derived per-device from esp_efuse_mac_get_default + top 2 bits set; SECURITY.md updated. Bonds from prior firmware invalidated — one-time re-pair required. |
-| E4 | `ca1cffe` | Android: onConnectionStateChange now checks GATT status; new DeviceState.Error / BluetoothOff / Connecting states; 10s connect timeout via mainHandler; BT adapter STATE_CHANGED receiver. Minimal UI chip handles new states. |
 
 Plus 10 per-task Status-tick commits on the plan file itself (`ade0455`, `88079a2`, `c455be3`, `2281945`, `c1a2bdd`, `27b708d`, `d1896cd`, `5a37d88`, `6d362bc`, `0f2e5b9`), and one SHA-fixup commit (`3d0e118`) — making 21 session-3 commits total.
 
-**Build state at end of session:** firmware `0x95d50` (was `0x95cb0` at session-3 start; +160 B net, all from A4's log string — A6 deleted preprocessor constants (zero bytes), B5's AE arrays were already linker-stripped). test_app `0x373c0` (unchanged, links green). No on-target re-verify done this session.
+**Build state at end of session 3:** firmware `0x95d50` (was `0x95cb0` at session-3 start; +160 B net, all from A4's log string — A6 deleted preprocessor constants (zero bytes), B5's AE arrays were already linker-stripped). test_app `0x373c0` (unchanged, links green). No on-target re-verify done this session.
 
-**New DD this session:** DD-021 in `docs/design_decisions.md` (shared-static access pattern on single-core ESP32-C3 — single-word atomic; check-then-use races inherent and bounded; multi-field locks belong to compound state, not single-word).
-
-**Pending on-target verifications carried over from sessions 2 + 3:**
-- TC-006 (write report interval) + TC-011 (reboot persistence) — confirms session 2's A1 deferred NVS write is behaviour-preserving.
-- TC-009 (notify subscribe/unsubscribe across reconnects) — confirms session 3's A4 added branch + DD-021 reasoning hold under real BLE traffic.
-- All 62 Unity tests (`62 Tests / 0 Failures / 1 Ignored`) — re-run after the env_sensor / ble_env / app_core / tinyml_inference touches in this session.
-
-**Resume point for next session:** all non-optional punch-list items are now closed. Remaining open work:
-1. **T11 (B2 path-a)** — retrain classifier + redeploy weights to resolve the saved_model-vs-deployed mismatch surfaced by session 2's B1. OPTIONAL; needs Python TF venv + on-target TC-ML-* re-verify. Plan task at `docs/superpowers/plans/2026-05-30-review-findings-cleanup.md` § T11.
-2. **B4 + D1 CLOSED** — dead ML artefacts deleted (`model_data.cc`, `model.tflite`, `model_quantized.tflite`, `quantize.py`); `verify_model.py` rewritten against `saved_model`; `train_classifier.py` stripped of TFLite output; `architecture.md` ml/ block updated; `.gitignore` covers `*.tflite`. Plan task T12 committed.
-3. **D2 CLOSED** — per-device eFuse-derived random-static BLE address; SECURITY.md updated; plan task T13 committed.
-4. **E4 CLOSED** — Android `onConnectionStateChange` now checks GATT status (133/8/19 → DeviceState.Error); DeviceState gains Connecting / BluetoothOff / Error; 10s connect timeout; BT adapter receiver; minimal UI chip on ScanScreen. Plan task T15 committed.
-5. **E2** — host-runnable tests (plan task T17, deferred).
+**New DD in session 3:** DD-021 in `docs/design_decisions.md` (shared-static access pattern on single-core ESP32-C3 — single-word atomic; check-then-use races inherent and bounded; multi-field locks belong to compound state, not single-word).
 
 ---
 
