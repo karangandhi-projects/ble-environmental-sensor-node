@@ -223,7 +223,7 @@ The test's own header comment (lines 5-9) says this is intentional: a TDD **red*
 - **E2 No host-runnable tests.** All Unity tests require on-target flashing → can't cheaply gate a PR. Formatters/encoders/`tinyml_infer` are pure C and could run on host in ms. (Missing leg of the TDD setup.)
 - **E3 No real-sensor validation.** Entire ML headline untested on real data (on roadmap; mark accuracy provisional).
 - **E4 Android robustness.** `onConnectionStateChange` ignores GATT `status` (133 errors); no Bluetooth-off UX; no connect timeout.
-- **E5 Extend `issues_encountered.md`.** It stops at Phase 2; the Phase 8 pairing saga and Phase 9 ML pivot are the richest lessons and currently only live in the contradictory `phase8_pairing_debug.md`.
+- **E5 Extend `issues_encountered.md`.** ~~Closed session 4 (E5): Issue 10 (Phase 8 pairing saga — Just Works → MITM Passkey Display, ENC_CHANGE race, Security Request timer rejection) and Issue 11 (Phase 9 ML pivot — autoencoder replaced by confidence thresholding, DD-019) appended to `docs/issues_encountered.md`.~~
 
 ---
 

@@ -165,3 +165,54 @@ if (rc != 0) {
 ```
 
 **Lesson**: Always check return codes from `ble_gap_adv_set_fields()`. The 31-byte advertising limit is a hard BLE protocol constraint — name + UUID128 + flags almost always overflows it.
+
+---
+
+## Issue 10 — Phase 8 pairing: Just Works → MITM Passkey Display, ENC_CHANGE race, Security Request timer rejection
+
+**Phase**: Phase 8 (BLE security)
+
+**Symptom**: 18 consecutive pairing attempts produced "Incorrect PIN or pairing code. Failed to connect to BLE_ENV_NODE" on Android 16. NimBLE serial log showed zero SM events on most attempts — pairing was silently aborting before any SMP PDU was exchanged.
+
+**Root cause** (two bugs, both required):
+
+1. **`ble_store_config_init()` never called.** This function wires `store_write_cb` / `store_read_cb` / `store_delete_cb` into `ble_hs_cfg`. Without it `store_write_cb` is NULL; the SM silently aborts at the LTK-save step after SC key exchange completes. `CONFIG_BT_NIMBLE_NVS_PERSIST=y` in sdkconfig is necessary but not sufficient — the actual NVS callbacks must be registered explicitly. The ESP bleprph reference example calls it; the project did not. This was invisible until attempt 18 when an SM exchange finally started and a hard crash revealed the store layer.
+
+2. **NimBLE host task stack too small for SC ECDH.** Default `CONFIG_BT_NIMBLE_HOST_TASK_STACK_SIZE` is 4096 bytes; SC (Secure Connections) pairing requires ECDH point-multiplication consuming ~6–7 KB of stack depth. With 4096 bytes the task overflowed and hard-crashed mid-pairing. Fixed by setting `CONFIG_BT_NIMBLE_HOST_TASK_STACK_SIZE=8192`.
+
+**Why it took 18 attempts**: Bug 1 aborted bonding silently before any SM PDU was exchanged. All diagnostic effort focused on SM configuration (IO cap, MITM flag, SC flag, Security Request timing) rather than the store layer — the actual failure point was completely invisible in INFO-level logs.
+
+**Two additional removals made permanent during debugging**:
+
+- **`ble_gap_update_params()` removed from CONNECT handler.** Immediately requesting a 500–1000 ms connection interval on CONNECT raced with Android 16's SMP initiation. Android cannot complete both the connection parameter update and SMP before supervision timeout fires (confirmed at attempt 8: connected at 15280 ms, disconnected at 18580 ms — only 3.3 s). Removing the call fixed the supervision race. The four `BLE_ENV_CONN_*` constants in `app_config.h` became dead and were deleted in session 3 (REVIEW_FINDINGS A6; DD-015 updated). Re-introducing interval negotiation would require ordering the `ble_gap_update_params()` call after `BLE_GAP_EVENT_ENC_CHANGE`.
+
+- **Security Request timer rejected.** Attempt 17 added a 500 ms post-connect timer calling `ble_sm_slave_initiate()` to push Android toward pairing. Result: `Pairing_Failed(0x08)` 30 ms after the Pairing Request arrived, with no Pairing Response. Root cause: the pending `SEC_REQ` procedure blocked `ble_sm_pair_exec` from creating the `PAIR` procedure. Empirical proof — attempt 11 (same SM config, no timer) successfully sent a Pairing Response; attempt 17 (timer added) did not. The Security Request timer pattern is permanently excluded from this project (see `AGENT_BRIEF.md` §"Security Request timer must NOT be used").
+
+**Fix** (attempt 19, "RESOLVED"):
+- Call `ble_store_config_init()` immediately after `nimble_port_init()` (forward-declare it; `ble_store_config.h` omits the declaration).
+- Set `CONFIG_BT_NIMBLE_HOST_TASK_STACK_SIZE=8192` in `firmware/sdkconfig`.
+
+**Subsequent upgrade (Phase B, DD-020)**: Just Works provided encryption with no MITM protection. The OLED was already present, so the SM config was upgraded to `BLE_HS_IO_DISPLAY_ONLY` + `sm_mitm=1` + `sm_sc=1` (MITM Passkey Display). Three additional fields required for passkey pairing to succeed on Android: `store_status_cb`, `sm_our_key_dist |= BLE_SM_PAIR_KEY_DIST_ENC`, `sm_their_key_dist |= BLE_SM_PAIR_KEY_DIST_ENC`.
+
+**Lesson**: `ble_store_config_init()` is a mandatory call after `nimble_port_init()` that most examples include silently. Its absence makes bonding fail silently with no log output. Check the store callbacks first before debugging SM IO-cap and MITM flags.
+
+---
+
+## Issue 11 — Phase 9 ML pivot: autoencoder anomaly replaced by confidence thresholding (DD-019)
+
+**Phase**: Phase 9 (TinyML inference)
+
+**Symptom**: At 55 °C / 10 % RH / 980 hPa (a "danger" reading), the firmware returned `ML_CLASS_ANOMALY` instead of `ML_CLASS_DANGER`. The classifier assigned a high softmax probability to `DANGER`, but the anomaly detector overrode it.
+
+**Root cause**: The initial anomaly detector was a separate 3→8→3 autoencoder trained exclusively on "comfortable" data. An autoencoder trained on one class learns the reconstruction manifold of that class and flags everything else as anomalous — including well-known labeled classes like `danger` or `hot`. The reconstruction error threshold (p95 of comfortable training samples, `ML_ANOMALY_THRESHOLD = 0.00474350f`) was crossed by any reading outside the comfortable region. This is not a bug in the implementation; it is a category error in the approach: an autoencoder's "anomaly" is "not comfortable", not "not any known class."
+
+**Fix** (DD-019): Replaced the separate autoencoder with a confidence threshold on the existing classifier. After softmax, if `max(out) < 0.50f` → return `ML_CLASS_ANOMALY` with `confidence = (1 - out[best]) × 100`. This is correct by construction: a well-separated input (e.g., 55 °C → `DANGER` with softmax → 0.99) never triggers anomaly; a genuinely uncertain input that falls between two class regions does. No additional weights needed — the 245-weight classifier handles anomaly detection as a side effect of its own uncertainty.
+
+**Removed** as a result:
+- `ML_AE_We[24]`, `ML_AE_be[8]`, `ML_AE_Wd[24]`, `ML_AE_bd[3]` arrays from `ml_weights.h` (~59 dead floats).
+- `ML_AE_HIDDEN_SIZE` and `ML_ANOMALY_THRESHOLD` `#define`s.
+- AE-preservation regex in `ml/extract_weights.py`.
+
+All cleaned up in session 3, REVIEW_FINDINGS B5.
+
+**Lesson**: An autoencoder trained on a single class is a "novelty detector for that class," not a general anomaly detector. Use classifier confidence thresholding when a labeled multi-class model already exists — it requires no extra weights and is correct by construction for in-distribution uncertainty.
