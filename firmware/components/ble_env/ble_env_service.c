@@ -44,6 +44,7 @@
 #include "display.h"
 #include "esp_random.h"
 #include "esp_log.h"
+#include "esp_mac.h"
 #include "esp_timer.h"
 #include "esp_sleep.h"
 #include "host/ble_hs.h"
@@ -500,10 +501,16 @@ static void advertise(void)
 
 static void on_sync(void)
 {
-    /* Random static address (bits 7:6 of byte[5] = 0b11 per BT spec).
-     * Using a fixed value avoids stale-LTK rejections from Android during
-     * development — Android has never seen this address and pairs fresh. */
-    static const uint8_t rnd_addr[6] = {0xDE, 0xAD, 0xBE, 0xEF, 0x01, 0xC2};
+    /* Random static address derived from the chip's factory eFuse MAC.
+     * BT spec requires bits 7:6 of byte[5] = 0b11 for random-static.
+     * Each unit gets a unique address (D2 — no shared MAC across flashed devices).
+     * NOTE: switching from a hardcoded MAC invalidates existing bonds — devices
+     * paired with prior firmware must re-pair after this update. */
+    uint8_t mac[6];
+    esp_efuse_mac_get_default(mac);          /* base factory MAC, LSB-first */
+    uint8_t rnd_addr[6];
+    memcpy(rnd_addr, mac, sizeof(rnd_addr));
+    rnd_addr[5] |= 0xC0;                     /* top 2 bits = 1 → random-static */
     ble_hs_id_set_rnd(rnd_addr);
     advertise();
 }

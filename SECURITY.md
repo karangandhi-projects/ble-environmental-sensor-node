@@ -6,7 +6,7 @@ This is a prototype/learning project — an ESP32-C3 BLE peripheral with a custo
 
 Known limitations that are by design (not vulnerabilities):
 - **MITM Passkey Display pairing, ~20 bits of entropy:** Pairing uses `BLE_HS_IO_DISPLAY_ONLY` + `sm_mitm = 1` + `sm_sc = 1` (Secure Connections). The peripheral generates a random 6-digit passkey (0–999999) shown on the OLED; the central prompts the user to type it. This protects against passive eavesdropping and active MITM, but a 6-digit code is only ~20 bits — an attacker with physical access who can observe the OLED and attempt many pairings could in principle brute it. Full details: `docs/security_model.md`.
-- **Fixed random static address:** The device MAC is constant and observable. Production deployments should use Resolvable Private Addresses (RPA).
+- **BLE static address:** derived per-device from the chip's factory eFuse MAC (top 2 bits forced to 1 per BT random-static spec). Bonds remain per-device. Switching from the prior hardcoded MAC (`0xC2:01:EF:BE:AD:DE`) invalidates bonds created before the D2 fix — one-time re-pair required.
 - **Bond capacity 3:** When full, the oldest bond is evicted automatically (`ble_store_util_status_rr`).
 
 ## Reporting a Vulnerability
