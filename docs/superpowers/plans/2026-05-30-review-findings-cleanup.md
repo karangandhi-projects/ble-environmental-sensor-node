@@ -66,9 +66,15 @@ git push
 | T8  | B     | Sonnet | B5         | `firmware/components/tinyml_inference/include/ml_weights.h`, `ml/extract_weights.py` | `- [x]` | `85571ca` | B5 closed |
 | T9  | B     | Sonnet | C7 (full)  | `docs/principal_review_report.md`                             | `- [x]` | `6a55cb7` | C7 closed |
 | T10 | C     | Opus   | A5         | `ble_env_service.c`, `display.c`, `design_decisions.md`       | `- [x]` | `3a119d9` | A5 closed via DD-021 (Option 1) |
-| T11 | C     | Opus   | B2 path-a (OPTIONAL) | `ml/`, `ml_weights.h`, README, RELEASE_NOTES         | `- [ ]` | —      |       |
+| T11 | C     | Opus   | B2 path-a (OPTIONAL) | `ml/`, `ml_weights.h`, README, RELEASE_NOTES         | `- [-]` | —      | DEFERRED — optional retrain, needs HW re-verify of TC-ML-* |
+| T12 | D     | Sonnet | B4 + D1    | `firmware/.../model_data.cc`, `ml/models/*.tflite`, `ml/verify_model.py`, `ml/README.md` or arch.md, REVIEW_FINDINGS | `- [ ]` | —      |       |
+| T13 | D     | Sonnet | D2         | `firmware/components/ble_env/ble_env_service.c`, `SECURITY.md`, REVIEW_FINDINGS | `- [ ]` | —      |       |
+| T14 | D     | Sonnet | E1         | `.github/workflows/build.yml` (new), `.github/workflows/README.md` (delete), REVIEW_FINDINGS | `- [ ]` | —      |       |
+| T15 | D     | Sonnet | E4         | `android/.../BleRepository.kt`, `android/.../BleViewModel.kt`, REVIEW_FINDINGS | `- [ ]` | —      |       |
+| T16 | D     | Sonnet | E5         | `docs/issues_encountered.md`, REVIEW_FINDINGS                  | `- [ ]` | —      |       |
+| T17 | D     | Opus   | E2 (DEFERRED) | host test runner, mock ESP-IDF stubs, CI                    | `- [-]` | —      | DEFERRED — new infra, out of session budget |
 
-**Recommended order:** T1 → T2 in parallel (both Haiku, no file overlap), then T3 → T4 → T5 → T6 → T7 → T8 → T9 (serial; T3 and T4 share README.md so they cannot parallelize), then T10, then T11 if pursued.
+**Recommended order:** T1 → T2 in parallel (both Haiku, no file overlap), then T3 → T4 → T5 → T6 → T7 → T8 → T9 (serial; T3 and T4 share README.md so they cannot parallelize), then T10, then T11 if pursued. **Phase D (T12–T16) added 2026-06-01:** serial Sonnet pass on the long-tail review items; T11/T17 deferred; E3 skipped (needs hardware).
 
 **Resume rule:** start at the first row whose Status is `- [ ]`. If all of Phase A/B are done and only T10/T11 remain, the user may choose to stop — the punch-list will be substantively cleared.
 
@@ -1025,3 +1031,115 @@ Plan saved to `docs/superpowers/plans/2026-05-30-review-findings-cleanup.md`. Th
 3. **Single-session sequential** — work through every task in this session via `superpowers:executing-plans`. Simplest; no per-task context reset; risks orchestrator context overflow on a long plan.
 
 **Which mode?**
+
+---
+
+## Phase D — long-tail Sonnet tasks (added 2026-06-01)
+
+Tasks T12–T16 close the remaining low-priority punch-list items from `docs/REVIEW_FINDINGS.md` "Remaining open work". Each task is dispatched as a fresh Sonnet subagent in the same per-task atomicity pattern as Phase B. T11 (B2 retrain) and T17 (E2 host tests) are deferred — they need either ML retrain + HW re-verify (T11) or new infrastructure beyond a single session's budget (T17). E3 (real-sensor validation) is skipped — requires a physical BME280.
+
+### Task T16 (do first — lowest risk, no approval): E5 — extend issues_encountered.md
+
+**Model:** Sonnet
+**Files:** `docs/issues_encountered.md` (append two new "Issue N" entries), `docs/REVIEW_FINDINGS.md` (tick + close E5)
+
+**Doc-only — no approval needed.**
+
+**Context:** `issues_encountered.md` stops at Issue 9 (Phase 2). The richest lessons of the project — the Phase 8 pairing saga (Just Works → MITM Passkey Display, ENC_CHANGE race, Security Request timer rejection, NimBLE SM config) and the Phase 9 ML pivot (autoencoder dropped, replaced with `max(softmax) < 0.5 → ANOMALY` per DD-019) — are currently scattered across `docs/phase8_pairing_debug.md`, `docs/design_decisions.md` DD-018/019/020, and `phase8_ble_pairing_debug.md` (memory only). Goal: distil each saga into one ~40-line `## Issue N — title` block matching the existing format (Phase / Symptom / Root cause / Fix / Lesson).
+
+Two issues to add:
+- **Issue 10** — Phase 8 pairing: Just Works → MITM Passkey Display, the ENC_CHANGE race that killed `ble_gap_update_params()`, and why Security Request timer must NOT be used. Source: `docs/phase8_pairing_debug.md`, DD-020, memory `phase8_ble_pairing_debug.md`.
+- **Issue 11** — Phase 9 ML pivot: AE-based anomaly dropped in favour of confidence thresholding. Source: DD-018, DD-019, REVIEW_FINDINGS B5.
+
+Append after Issue 9. Match existing tone — terse, root-cause-first, end with a one-line lesson.
+
+Standard end-of-task: commit + push + REVIEW_FINDINGS close (delete the E5 bullet from "Resume point" / Remaining punch-list and add to "Closed this session" table) + tick T16 + push the plan.
+
+### Task T14 (do second — no approval): E1 — GitHub Actions CI
+
+**Model:** Sonnet
+**Files:** `.github/workflows/build.yml` (new), delete `.github/workflows/README.md`, `docs/REVIEW_FINDINGS.md`
+
+**No approval needed (new file + delete a placeholder README).**
+
+**Context:** CI is a placeholder README only. Add a minimal GitHub Actions workflow that catches the most common drift:
+1. Firmware build via `espressif/esp-idf-ci-action@v1` for both `firmware/` and `firmware/test_app/` (target esp32c3, IDF v5.2.3).
+2. Android build via `./gradlew assembleDebug` in `android/BleEnvNode/` (JDK 17, no signing).
+3. Optional: `python3 ml/verify_model.py` if TF cache hits — gated behind `pip install -r ml/requirements.txt` failing-soft.
+
+Trigger on `push` to main + `pull_request`. Pin action versions.
+
+Standard end-of-task as above.
+
+### Task T12 (do third — needs approval, source delete): B4 + D1 — dead ML artifacts
+
+**Model:** Sonnet
+**Files:** delete `firmware/components/tinyml_inference/model_data.cc` (uncompiled), `ml/models/model.tflite` (Android doesn't use), `ml/models/model_quantized.tflite` (unused). KEEP `ml/models/saved_model/` (extract_weights.py reads it). Update or delete `ml/verify_model.py` (smoke-tests deleted model.tflite — replace with one that validates the saved_model pipeline). Add a "regenerate from saved_model" note to `docs/architecture.md` ml/ block or a new `ml/README.md`. Update `docs/REVIEW_FINDINGS.md`.
+
+**🔒 SOURCE DELETE — needs approval.**
+
+**Context:** B4 from REVIEW_FINDINGS: "Dead ML artifacts presented as pipeline." Decision (made 2026-06-01 by Opus orchestrator): keep what's actually used (`saved_model/` + extract_weights.py + the deployed `ml_weights.h`); delete the rest; document the path.
+
+Steps:
+1. Grep to confirm `model_data.cc` is not in any CMakeLists.txt SRCS, `model.tflite` is not referenced from `android/`, `model_quantized.tflite` is not referenced anywhere.
+2. Surface the delete list to user, wait for "yes approve".
+3. `git rm` the three files.
+4. Decide: rewrite `verify_model.py` to test `saved_model + extract_weights.py` roundtrip, or delete it. Recommend rewrite — it's a useful smoke test for the regenerator path.
+5. Add a note in `docs/architecture.md` ml/ block (or a fresh `ml/README.md`) explaining: deployed weights live in `firmware/components/tinyml_inference/include/ml_weights.h`; regenerate with `python3 ml/extract_weights.py --saved-model ml/models/saved_model`; the int8 `.tflite` files are not part of the deployed pipeline.
+6. Verify firmware builds green; verify ml/extract_weights.py imports green; verify Android still compiles.
+
+Standard end-of-task.
+
+### Task T13 (do fourth — needs approval, source edit): D2 — per-device BLE static address
+
+**Model:** Sonnet
+**Files:** `firmware/components/ble_env/ble_env_service.c` (line ≈ 506, the `rnd_addr` literal), `SECURITY.md`, `docs/REVIEW_FINDINGS.md`
+
+**🔒 SOURCE EDIT — needs approval.**
+
+**Context:** D2 from REVIEW_FINDINGS: every flashed unit shares one MAC `0xC2:01:EF:BE:AD:DE`. SECURITY.md already flags it. Fix: derive the random-static address from the chip's eFuse MAC + ensure top two bits are `1` (BLE random-static address spec).
+
+Implementation sketch:
+```c
+uint8_t mac[6];
+esp_efuse_mac_get_default(mac);                /* factory MAC, LSB-first */
+uint8_t rnd_addr[6];
+memcpy(rnd_addr, mac, 6);
+rnd_addr[5] |= 0xC0;                            /* top 2 bits = 1 (random static) */
+```
+
+Use `mac[5] | 0xC0` (the top byte) — NimBLE `ble_hs_id_set_rnd` expects LSB-first, so index 5 is the high byte.
+
+Steps:
+1. Grep for `esp_efuse_mac_get_default` headers (`esp_mac.h` or `esp_system.h` depending on IDF version) and confirm available in IDF v5.2.3.
+2. Surface the diff, wait for "yes approve".
+3. Apply, build firmware. Expect ~50 bytes growth.
+4. Update SECURITY.md: change the "every unit shares MAC" caveat to "address now derived per-device from eFuse; bonds remain per-device".
+5. Test (build only — on-target verify deferred): mention in the commit body that the new address won't match prior bonds; users should re-pair after this update.
+
+Standard end-of-task.
+
+### Task T15 (do fifth — needs approval, Kotlin source edit): E4 — Android robustness
+
+**Model:** Sonnet
+**Files:** `android/BleEnvNode/app/src/main/java/com/bleenvnode/BleRepository.kt`, possibly `BleViewModel.kt` for state propagation, `docs/REVIEW_FINDINGS.md`
+
+**🔒 SOURCE EDIT — needs approval.**
+
+**Context:** E4 from REVIEW_FINDINGS: three holes in the Android BLE layer:
+1. `onConnectionStateChange` ignores `status` — GATT 133 ("error" — common transient connect failure) is treated as a normal disconnect. Should: close gatt, expose error state, allow retry.
+2. No Bluetooth-off UX — if the user turns BT off, the app continues as if scanning.
+3. No connect timeout — `connectGatt` hangs forever if the peripheral never responds.
+
+Implementation sketch:
+- In `onConnectionStateChange`: if `status != GATT_SUCCESS`, set `deviceState.value = DeviceState.Error(status)` and `g.close()` + `gatt = null`.
+- Add `DeviceState.Error(val gattStatus: Int)` to the sealed class in `DeviceState.kt`.
+- Register a `BroadcastReceiver` for `BluetoothAdapter.ACTION_STATE_CHANGED`; on `STATE_OFF` set `DeviceState.BluetoothOff` and gracefully tear down.
+- Connect timeout: launch a coroutine 10 s after `connectGatt`; if state is still `Connecting`, close + error.
+
+Steps:
+1. Read `BleRepository.kt` + `DeviceState.kt` end-to-end first so the changes fit the existing patterns.
+2. Surface the diff (likely ~80 lines added across 2-3 files), wait for "yes approve".
+3. Apply. Run `./gradlew assembleDebug` from `android/BleEnvNode/` to verify it builds.
+
+Standard end-of-task.
