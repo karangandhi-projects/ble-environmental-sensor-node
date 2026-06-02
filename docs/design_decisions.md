@@ -196,7 +196,7 @@ Reason:
 
 Tradeoff:
 - Model updates require retraining, re-running `ml/extract_weights.py`, and reflashing. There is no hot-swap mechanism. Acceptable for a portfolio/learning project.
-- The int8 quantized `model_data.cc` (also in the component) is retained for reference if TFLite Micro support is added later.
+- The int8 quantized `model_data.cc` was retained in the component for a while as a reference for a possible future TFLite Micro path; it was deleted in commit `295295c` (REVIEW_FINDINGS B4) along with the unused `.tflite` artifacts. A future TFLite Micro path would regenerate it from `ml/models/saved_model`.
 
 ## DD-019 Anomaly Detection via Classifier Confidence Threshold
 

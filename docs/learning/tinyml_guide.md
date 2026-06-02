@@ -338,7 +338,7 @@ Three reasons:
 
 1. **TFLite Micro is not in the ESP-IDF v5.2.3 component registry.** Integrating it requires manually adding a CMake component with a large external source tree. For a model this small, that complexity buys nothing.
 
-2. **The model is tiny.** 245 parameters at float32 = 980 bytes. The entire `tinyml_inference.c` + `ml_weights.h` adds approximately 5 KB to the firmware binary. The total firmware image is `0x95cb0` bytes (around 614 KB). ML is less than 1% of the binary footprint.
+2. **The model is tiny.** 245 parameters at float32 = 980 bytes. The entire `tinyml_inference.c` + `ml_weights.h` adds approximately 5 KB to the firmware binary. The total firmware image is `0x95d60` bytes (around 614 KB). ML is less than 1% of the binary footprint.
 
 3. **Zero runtime overhead.** The forward pass is three matrix multiplications, two ReLU passes, and one softmax. On the ESP32-C3 at 160 MHz, this completes in microseconds. No interpreter, no memory allocation, no context switching.
 
@@ -525,7 +525,7 @@ The confidence value reported for an anomaly is `(1.0 - out[best]) * 100`. This 
 
 An autoencoder is a different kind of model: it learns to compress and reconstruct its input. Trained only on `comfortable` examples, it learns what comfortable sensor readings look like. At inference time, you run the input through the encoder and decoder, compute the reconstruction error, and flag anomalies when the error exceeds a threshold.
 
-The `ml_weights.h` file still contains autoencoder weights (`ML_AE_We`, `ML_AE_Wd`, etc.) from the original attempt. The threshold is `ML_ANOMALY_THRESHOLD = 0.00474350f`.
+The original autoencoder arrays (`ML_AE_We`, `ML_AE_Wd`, etc.) and the `ML_ANOMALY_THRESHOLD = 0.00474350f` macro were carried in `ml_weights.h` for a while as dead code (the linker stripped them via `--gc-sections`, so they had zero binary cost). They were deleted in commit `85571ca` (REVIEW_FINDINGS B5).
 
 The problem: the autoencoder was trained only on comfortable-temperature and comfortable-humidity ranges. Any non-comfortable reading — warm, cold, humid, danger — produces high reconstruction error. The model was flagging every non-comfortable reading as an anomaly, making it useless for distinguishing "sensor reading outside known training distribution" from "sensor reading in a known-but-non-comfortable class."
 

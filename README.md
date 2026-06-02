@@ -67,7 +67,7 @@ Full details in `docs/build_and_flash.md`.
 - **Sensor Override** (b7e00006): inject simulated values via BLE; ±2°C drift for realism
 - **TinyML** (b7e00007): on-device 5-class environmental classifier (comfortable/warm/cold/humid/danger) + anomaly detection, notifies on class change
 - 245-weight pure-C MLP (3→16→8→5), no external ML runtime required
-- Binary: **0x95cb0 bytes (~59% of 1 MB flash)**
+- Binary: **0x95d60 bytes (~59% of 1 MB flash)**
 
 **Android App (Phase 9B):**
 - BLE scan, connect, MITM Passkey pairing (Android prompts for the 6-digit passkey shown on the OLED)
@@ -142,8 +142,8 @@ Full details in `docs/build_and_flash.md`.
 ├── ml/                                # Python ML training pipeline
 │   ├── collect_synthetic.py           # generate 1500-sample synthetic baseline
 │   ├── train_classifier.py            # 5-class MLP (98.83% on synthetic test set — box-separability, not real-sensor skill; see RELEASE_NOTES)
-│   ├── quantize.py                    # int8 quantization + model_data.cc
-│   └── verify_model.py                # smoke-test 5 known vectors
+│   ├── extract_weights.py             # regenerate ml_weights.h from saved_model (canonical deploy path)
+│   └── verify_model.py                # smoke-test 5 known vectors against saved_model
 ├── tests/manual_test_matrix.md        # TC rows with Pass/Not run status
 └── tools/
     ├── decode_telemetry_frame.py
@@ -172,7 +172,7 @@ Full details in `docs/build_and_flash.md`.
 
 | Component | Status | Details |
 |-----------|--------|---------|
-| Firmware | ✅ Green | 0x95cb0 bytes (~59% flash) — ESP32-C3 / ESP-IDF v5.2.3 |
+| Firmware | ✅ Green | 0x95d60 bytes (~59% flash) — ESP32-C3 / ESP-IDF v5.2.3 |
 | Android app | ✅ Green | `./gradlew assembleDebug` — min SDK 26 |
 | ML model | ✅ Trained | 98.83% on the synthetic test set (1500 synthetic + 379 override samples drawn from the same disjoint class boxes used to train — measures box-separability, not real-sensor skill). Real-sensor accuracy unknown until retrained on BME280/SHT31 readings. |
 | Unit tests | ✅ On-target | 62 Tests / 0 Failures / 1 Ignored — Unity suite across `app_core`, `ble_env`, `env_sensor`, `display` |

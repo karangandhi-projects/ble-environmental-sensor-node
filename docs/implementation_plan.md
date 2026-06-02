@@ -260,7 +260,7 @@ Goal: Train 5-class classifier, deploy edge inference on ESP32-C3.
 
 Exit criteria:
 - [DONE] 1879 samples collected (1500 synthetic + 379 real with ±2°C drift).
-- [DONE] model.tflite accuracy 99.7% — all verify_model.py vectors pass.
+- [DONE] model.tflite accuracy 99.7% — all verify_model.py vectors pass. *(at Phase 9C close; later reconciled to 98.83% in commit `0f5adf8` — see REVIEW_FINDINGS B2 — and the `.tflite` artifact itself was deleted in `295295c` since the deployed pipeline is `saved_model → ml_weights.h` via `extract_weights.py`.)*
 - [DONE] Pure-C tinyml_inference component (no TFLite Micro dep) builds — 0x99220 bytes (59% flash).
 - [DONE] b7e00007 ML Alert notifies on class change, confirmed in Android app.
 - [DONE] Android CCCD write queue fix — ML Alert subscription reliable.
