@@ -132,7 +132,7 @@ Tradeoff:
 
 ## DD-013 Multi-Agent Orchestration with Scope-Containment
 
-Decision: Parallelize code-generation work via sub-agents where the work is independent (pre-phase scaffolding, Phase 1.5 display sub-modules, Phase 3 encoder TDD, Phase 5/6 TDD). Every sub-agent runs under a strict preamble that confines writes to `/home/karan-gandhi/ble_skill_project_package_reviewed/` and reads-only from `~/esp/esp-idf/`.
+Decision: Parallelize code-generation work via sub-agents where the work is independent (pre-phase scaffolding, Phase 1.5 display sub-modules, Phase 3 encoder TDD, Phase 5/6 TDD). Every sub-agent runs under a strict preamble that confines writes to `/home/[YOUR PROJECT FOLDER]/ and reads-only from `~/esp/esp-idf/`.
 
 Reason:
 - Hardware-bound work (flashing, nRF Connect, manual TC verification) is inherently single-threaded; parallelism only helps where work is code-gen-bound.
