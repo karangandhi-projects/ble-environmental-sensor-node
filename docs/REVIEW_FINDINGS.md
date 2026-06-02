@@ -154,32 +154,33 @@ Numbers everywhere now match the verified state. Current build size **0x95cb0** 
 - **"20-entry history" → "last 50 entries (`take(50)`)"** to match `DataAlertsScreen.kt:97`.
 - **TC range (C4 sub-item) — already fixed in C3** (`TC-001–TC-011` → `TC-001–TC-012`).
 
-## Remaining punch-list (next-pickup)
+## Remaining open items (current state — 2026-06-01 end-of-session-5)
 
-Priority order in **Priority order** section. Open items at a glance:
-- **B2 path-a follow-up** (optional, high if pursued) — retrain + redeploy; resolve the saved_model-vs-deployed mismatch surfaced in B1.
-- **A5** (low) — inconsistent locking on s_conn_handle / s_ml_alert_subscribed / s_last_page.
-- **A2–A7** (med-low) — small code issues (SIM-badge override docs, default-sim near-constant range, unchecked return, inconsistent locking, dead conn-param constants, drift comment).
-- **C5** (low) — OLED page spec in requirements.md FR-011 still says {state, temp, humidity} @ 3000/1500/1500 ms; code is {temp, humidity, pressure} @ 2000/2000/2000 + persistent state badge.
-- Then the rest of B, C, D, E in priority order.
+All original A/B/C/D/E findings and TEST-COLLISION / TEST-ENCODE-BROKEN are closed (see session 2-5 wraps above for per-item commit SHAs; per-item closure markers are inline in sections A-E below). Three items remain off the table:
+
+- **T11 / B2 path-a** (OPTIONAL) — retrain classifier + redeploy weights to close the saved_model-vs-deployed mismatch surfaced in session 2's B1. Single-session feasible if Python TF venv works; changes deployed model behaviour → needs full TC-ML-* re-verify. Plan task at `docs/superpowers/plans/2026-05-30-review-findings-cleanup.md` § T11.
+- **T17 / E2** (DEFERRED) — host-runnable tests for pure-C modules (encoders, validators, formatters). New infrastructure (mock ESP-IDF/FreeRTOS stubs, host CMake target, CI integration). Beyond a single-session budget; tracked in plan § T17.
+- **E3** (SKIPPED) — real-sensor validation on a physical BME280/BMP280. Requires hardware not in the rig.
 
 ---
 
-## ✅ Verified on hardware / by clean build (2026-05-29)
+## ✅ Verified on hardware / by clean build (2026-05-29 — original snapshot)
+
+> **Historical snapshot at the time of the original review.** Current verified state is in the session-5 wrap at the top: firmware **`0x95d60`** (after A1 +304 B, A4 +160 B, D2 +16 B; A6/B5 zero net), Unity **62/0/1** still, manual matrix **24/25 Pass + 1 Obsolete**. The C3 binary-size and TC-count mismatches in the table below were all fixed in session 2's C3 (`3b8acc2`).
 
 Board: ESP32-C3 on `/dev/ttyACM0` (MAC 38:44:be:44:c0:a8). ESP-IDF v5.2.3.
 
 | Claim in docs | Verdict | Evidence |
 |---|---|---|
 | Firmware builds green | ✅ TRUE | `idf.py build` of `firmware/` and `firmware/test_app/` both link cleanly from current `main` |
-| Binary size `0x94f00`/`0x99520`/`0x98410` | ❌ all wrong | linker: **`0x95b80` bytes (613,248) — 58% used / 42% free** of the 0x100000 app partition |
+| Binary size `0x94f00`/`0x99520`/`0x98410` | ❌ all wrong (fixed in C3) | linker at review time: **`0x95b80` bytes** — 58% used / 42% free of the 0x100000 app partition |
 | Unity suite "37 tests / all pass" | ✅ FIXED → 62 | Was 37 (display only) due to TEST-COLLISION; after the rename + encoder fix, on-target = **`62 Tests 0 Failures 1 Ignored / OK`** (2026-05-29) |
-| Manual test matrix "19"/"20" cases | ❌ wrong | matrix actually has **25 rows** (separate from Unity tests) |
+| Manual test matrix "19"/"20" cases | ❌ wrong (fixed in C3) | matrix actually has **25 rows** (separate from Unity tests) |
 | On-target "0 failures" | ✅ TRUE after fix | all 62 pass (1 ignored placeholder); the 25 formerly-dropped tests — incl. the frozen-GATT encode lock — now run green |
 
 ---
 
-## 🔴 TEST-COLLISION (top finding) — 40% of the test suite silently never runs
+## ✅ TEST-COLLISION (top finding — RESOLVED 2026-05-29, `e1ed479`) — historical writeup of the original symptom
 
 **Symptom:** On-target `idf.py flash monitor` of `test_app` runs only the **37 display tests** (`test_display_logic` 36 PASS + `test_display_pending` 1 IGNORE) → `37 Tests 0 Failures 1 Ignored / OK`. Looks healthy; isn't.
 
@@ -195,7 +196,7 @@ Board: ESP32-C3 on `/dev/ttyACM0` (MAC 38:44:be:44:c0:a8). ESP-IDF v5.2.3.
 | `env_sensor` | `test_sensor_provider` (2), `test_sensor_override` (6) | DD-017 ±2 °C override/drift contract |
 | `app_core` | `test_app_state` (6), `test_storage_config` (3), `test_power_mode` (5) | State machine, NVS parse, sequence counter |
 
-**Fix:** unique dir basenames (being applied — see top). After fix, expect 62 tests to register; on-target pass result still to be confirmed by the user's `run_tests.py` run.
+**Fix shipped 2026-05-29 (`e1ed479`):** four dir renames (`test/` → `test_<name>/`) + `firmware/test_app/CMakeLists.txt` EXTRA_COMPONENT_DIRS update. On-target Unity then went 37 → **62 / 0 / 1 / OK**. Re-verified again session 5 after D2's `ble_env_service.c` touch: still 62 / 0 / 1 / OK.
 
 **Lesson:** ESP-IDF component name = dir basename, must be unique; collisions dedupe silently. A green "OK / 0 failures" covered only 60% of the suite. `compiles` ≠ `runs`.
 
@@ -203,7 +204,7 @@ Board: ESP32-C3 on `/dev/ttyACM0` (MAC 38:44:be:44:c0:a8). ESP-IDF v5.2.3.
 
 ---
 
-## 🔴 TEST-ENCODE-BROKEN (surfaced by fixing TEST-COLLISION) — the GATT-encoder test never compiled
+## ✅ TEST-ENCODE-BROKEN (RESOLVED 2026-05-29, same commit as TEST-COLLISION) — historical writeup
 
 After the rename fix, the test build fails at link:
 ```
@@ -216,59 +217,71 @@ The test's own header comment (lines 5-9) says this is intentional: a TDD **red*
 
 **Fix (needs approval — edits `ble_env_service.c`):** give `encode_telemetry`/`encode_status` external linkage + a shared declaration. Recommended: declare both in a small internal header (`ble_env_encode.h`, or in `ble_env_service.h`), `#include` from both `ble_env_service.c` and the test, drop `static`. Minimal: just remove `static` (the test already forward-declares them, lines 19-20). Then rebuild → expect link success and the 3 encode tests to run and pass (they assert the exact frozen bytes, e.g. 2456 → `0x0998` LE at offset 8). This completes a real red→green TDD cycle and turns on the only automated check of the frozen GATT contract.
 
-**STATUS (2026-05-29): FIXED at build level** — `static` removed (approved); test app links green; the 3 encode tests are registered in the ELF. On-target *pass* still to be confirmed via `run_tests.py`.
+**STATUS: FIXED 2026-05-29** — `static` removed (approved) in commit `e1ed479`; the 3 encode tests register, link, and pass on-target as part of the 62/0/1 run. Re-verified session 5.
 
 ---
 
 ## A. Correctness / code issues
 
-- **A1 [High] Blocking flash write inside a BLE callback.** `ble_env_service.c:151` calls `storage_config_save()` (NVS flash write, tens of ms) synchronously inside `gatt_access_cb` (NimBLE host task). Violates AGENT_BRIEF #7, NFR-003, DD-006, and `app_main.c:30` docstring. **Fix:** set a "config dirty" flag in `app_state`; do the NVS write in `telemetry_task` (mirror `force_sample`).
+> All A-series items are closed. A1 is preserved below in long form; A2–A7 were tracked only in the original punch-list summary and are all closed in session 3 (see session-3 wrap table for SHAs: A2 `baa6403`, A3 `2ac5825`, A4 `178f180`, A5 `3a119d9`, A6 `294bf6b`, A7 `449efdd`). A1, A4, A5 also have on-target re-verification per the session-5 wrap.
+
+- **A1 [High] Blocking flash write inside a BLE callback.** ✅ **CLOSED session 2** (`a3ef354`); on-target re-verified session 5 (TC-010 + TC-012). *Original symptom:* `ble_env_service.c:151` called `storage_config_save()` (NVS flash write, tens of ms) synchronously inside `gatt_access_cb`, violating AGENT_BRIEF #7, NFR-003, DD-006. *Fix shipped:* dirty-flag mirror of `force_sample` — NVS write deferred to `telemetry_task`.
 
 ---
 
 ## B. ML pipeline (highest learning value)
 
-- **B1 [High] Deployed model can't be regenerated — `ml/extract_weights.py` does not exist.** The firmware runs float32 weights in `ml_weights.h`, whose header + `tinyml_inference.c:38` + `DD-018:199` + `architecture.md` + `tinyml_guide.md` (lines 345/492/494) all reference `extract_weights.py` to (re)generate them. The file is absent. `train_classifier.py:27` wrongly says `quantize.py` makes it (it only emits the unused int8 `model_data.cc`). **Fix:** add the real `extract_weights.py` (read `models/saved_model`, write the C float arrays) and fix the cross-refs. *Lesson: a model you can't regenerate from committed code, you don't really have.*
-- **B2 [High] Accuracy numbers disagree.** Deployed `ml_weights.h` header says **98.83%**; README:177 / `tinyml_inference.h:27` / `architecture.md:227` say **99.7%**. The flashed weights predate the cited dataset. **Fix:** reconcile to one number tied to the actual deployed weights.
-- **B3 [High / key lesson] "99.7%" measures box-separability, not skill.** `collect_synthetic.py` draws each class from disjoint uniform boxes; train/test are the same generator, so ~99% is trivial. The "379 real device samples" are human slider entries in the same boxes — not independent data. `RELEASE_NOTES:52` states the caveat correctly; **propagate that honesty everywhere** and stop leading with 99.7%. No real-sensor validation exists.
+> B1, B2 (doc layer), B3, B4, B5 all closed. The only B-item still open is **B2 path-a** (optional retrain — see "Remaining open items" above).
+
+- **B1 [High] Deployed model can't be regenerated.** ✅ **CLOSED session 2** (`53c27fd`) — added `ml/extract_weights.py` (loads `models/saved_model`, writes the six `ML_W*` / `ML_b*` arrays). Smoke test surfaced a real saved_model-vs-deployed mismatch (tracked separately as B2 path-a). Cross-refs in `train_classifier.py` and `architecture.md` fixed in the same commit.
+- **B2 [High] Accuracy numbers disagree.** ✅ **CLOSED at doc layer session 2** (`0f5adf8`) — reconciled to **98.83%** (deployed-model truth) everywhere. *Path-a retrain remains optional* — would close the B1-surfaced saved_model-vs-deployed mismatch but needs HW re-verify of TC-ML-*.
+- **B3 [High / key lesson] "99.7%" measures box-separability, not skill.** ✅ **CLOSED session 2** (`0f5adf8`) — box-separability caveat propagated to every site that cites the accuracy (`tinyml_inference.h`, `README.md`, `RELEASE_NOTES_v1_0_0.md`).
+- **B4 [Med] Dead ML artifacts presented as pipeline.** ✅ **CLOSED session 4** (`295295c`) — deleted `model_data.cc`, `model.tflite`, `model_quantized.tflite`, `quantize.py`; rewrote `verify_model.py` to test the `saved_model` path; canonical pipeline now `collect_synthetic → train_classifier → saved_model → extract_weights → ml_weights.h`. Firmware byte-identical (the deleted files were never compiled).
+- **B5 [Med] Dead autoencoder arrays in `ml_weights.h`.** ✅ **CLOSED session 3** (`85571ca`) — `ML_AE_*` arrays + `ML_AE_HIDDEN_SIZE` + `ML_ANOMALY_THRESHOLD` removed (DD-019 made them dead). Binary size unchanged — linker `--gc-sections` had already stripped them.
 
 ---
 
 ## C. Documentation consistency (dominant problem)
 
-- **C1 [High] "Just Works" vs "MITM Passkey Display" split across the repo.** Code is authoritative: `ble_env_service.c:544-547` = `DISPLAY_ONLY` + `sm_mitm=1` + `sm_sc=1` = **MITM Passkey Display**.
-  - **Correct:** `security_model.md`, `RELEASE_NOTES`, `DD-020`, matrix `TC-SEC-05/06`.
-  - **Stale/wrong (say Just Works):** `SECURITY.md:8` (worst — public policy, also self-contradictory "device with no display" when the device's display shows the passkey), `gatt_profile.md:187-198`, `README` (roadmap lists passkey as "future" + FR-014), `requirements.md` FR-010/FR-014, `implementation_plan.md:208-217`, `test_plan.md:37` + matrix `TC-SEC-02`, `phase8_pairing_debug.md`, `ble_env_service.c:26` docstring (+ wrong "See DD-008" — DD-008 is OTA), `ble_env_service.h:25,49`, `BleRepository.kt:16`.
-  - **Fix:** make everything defer to `security_model.md`; fix `SECURITY.md` first.
-- **C2 [High] `phase8_pairing_debug.md` self-contradictory.** Declares attempt 19 "RESOLVED" with **Just Works**, yet trailing "What has NOT been tried yet" / "Next step: clear nRF Connect app data" reads as still-broken — and the whole thing was superseded by MITM passkey (DD-020). Reconcile or mark "historical."
-- **C3 [Med] Every headline count disagrees.**
-  - Unity tests: README "8 env_sensor + encode" / "19" / "20"; RELEASE_NOTES "37"; review report "19"; tree has **62 written / 37 actually run** (see TEST-COLLISION).
-  - Manual matrix: README "19"/"20" vs **25 rows**. Also `TC-SEC-02` (Just Works) and `TC-SEC-05` (MITM) are **both marked Pass** — impossible on one build.
-  - Binary size: `0x94f00` vs `0x99520` vs `0x98410` vs actual **`0x95b80`**.
-- **C4 [Med] `RELEASE_NOTES_v1_0_0.md` errors.** Scrambled DD cross-refs (DD-001/002/003/004/015 all mislabeled); "Embedded weights: …/`model_data.h`" (wrong file — it's `ml_weights.h`); "245 weights fit in IRAM" (they're flash `.rodata`); "20-entry history" (code shows `take(50)` in `DataAlertsScreen`); "TC-001–TC-011" (matrix has 012).
+> All C-series items closed across sessions 2 and 3.
+
+- **C1 [High] "Just Works" vs "MITM Passkey Display" split.** ✅ **CLOSED session 2** (docs: `08d6420`, source comments: `fa0e802`) — every site now defers to `docs/security_model.md`; grep for "Just Works" in firmware/Android source is clean.
+- **C2 [High] `phase8_pairing_debug.md` self-contradictory.** ✅ **CLOSED session 2** (`08d6420`) — historical banner added; superseded by MITM passkey (DD-020).
+- **C3 [Med] Every headline count disagrees.** ✅ **CLOSED session 2** (`3b8acc2`) — at the time: binary `0x95cb0`, Unity 62/0/1, manual 24/25 + 1 Obsolete. Post-session-4 binary is `0x95d60` (drift recorded in the session-5 wrap snapshot banner above).
+- **C4 [Med] `RELEASE_NOTES_v1_0_0.md` errors.** ✅ **CLOSED session 2** (`aa79796`) — DD cross-refs fixed, `model_data.h` → `ml_weights.h`, "IRAM" → flash `.rodata`, "20-entry history" → `take(50)`, TC range `TC-001–TC-012`.
+- **C5 [Low] OLED page spec stale in requirements.md FR-011.** ✅ **CLOSED session 3** (`d4463cc`) — FR-011 now lists `{temperature, humidity, pressure} @ 2000 ms` + persistent BLE-state badge to match `display.c`.
+- **C6 [Low] `architecture.md` half-stale.** ✅ **CLOSED session 3** (`49d0f0f`) — single canonical 5-component Module Layout at the top; Phase 9 Extensions subsection collapsed to a pointer up; stale "display TBD — Phase 1.5" removed.
+- **C7 [Low] `principal_review_report.md` is itself stale.** ✅ **CLOSED session 3** (`6a55cb7`) — body replaced with a 4-line pointer stub to this doc.
+
 ---
 
 ## D. Repo hygiene
 
-- **D3** `.venv/`, `build/`, `.idea/`, `local.properties` correctly gitignored. (Good.)
+- **D1 [Low] gitignore / regenerate note for dead `ml/models/*`.** ✅ **CLOSED session 4** (`295295c`, bundled with B4) — `.gitignore` extended to cover `ml/models/*.tflite`; canonical regenerate path documented in `architecture.md`.
+- **D2 [Low] Hardcoded BLE static address.** ✅ **CLOSED session 4** (`7f33400`); on-target re-verified session 5 (TC-SEC-05 + TC-SEC-06). Address now derived per-device from `esp_efuse_mac_get_default()`.
+- **D3** `.venv/`, `build/`, `.idea/`, `local.properties` correctly gitignored. (No change needed; was already good at original review.)
 
 ---
 
 ## E. Gaps / suggested additions
 
-- **E2 No host-runnable tests.** All Unity tests require on-target flashing → can't cheaply gate a PR. Formatters/encoders/`tinyml_infer` are pure C and could run on host in ms. (Missing leg of the TDD setup.)
-- **E3 No real-sensor validation.** Entire ML headline untested on real data (on roadmap; mark accuracy provisional).
-- **E5 Extend `issues_encountered.md`.** ~~Closed session 4 (E5): Issue 10 (Phase 8 pairing saga — Just Works → MITM Passkey Display, ENC_CHANGE race, Security Request timer rejection) and Issue 11 (Phase 9 ML pivot — autoencoder replaced by confidence thresholding, DD-019) appended to `docs/issues_encountered.md`.~~
+- **E1 [Med] No CI.** ✅ **CLOSED session 4** (`0d9bcfa`) — GitHub Actions workflow: ESP-IDF builds (firmware + test_app), Gradle `assembleDebug` for Android, TF smoke for ML (continue-on-error).
+- **E2 [Med] No host-runnable tests.** ⏸️ **DEFERRED** (plan task T17) — beyond a single-session budget; needs mock ESP-IDF/FreeRTOS stubs, host CMake target, CI integration.
+- **E3 [Low] No real-sensor validation.** ⏸️ **SKIPPED** — requires a physical BME280/BMP280 not in the rig.
+- **E4 [Med] Android BLE robustness gaps.** ✅ **CLOSED session 4** (`ca1cffe`) — `onConnectionStateChange` checks GATT status (133/8/19 → `DeviceState.Error`); new `Connecting` / `BluetoothOff` / `Error` states; 10 s connect timeout; `ACTION_STATE_CHANGED` receiver.
+- **E5 [Low] Extend `issues_encountered.md`.** ✅ **CLOSED session 4** (`b0b503b`) — Issue 10 (Phase 8 pairing saga) + Issue 11 (Phase 9 ML pivot).
 
 ---
 
-## Priority order (if only a few things)
+## Priority order (historical 2026-05-29 ranking — all closed)
 
-1. **Finish TEST-COLLISION fix** (in progress) — restore real test coverage; then run on-target to confirm 62 pass.
-2. **One pairing story** (MITM Passkey Display) across the repo, starting `SECURITY.md` + `gatt_profile.md` (C1).
-3. **ML reproducibility** — add `extract_weights.py` (B1); reconcile 98.83% vs 99.7% (B2); propagate the honest accuracy caveat (B3).
-4. **Defer NVS write out of BLE callback** (A1).
-5. **Reconcile counts/sizes** in docs to verified values: binary `0x95b80`, 62 Unity tests, 25 manual TCs (C3).
+Original "if only a few things" list, preserved for audit. Every item is closed; current open items are in "Remaining open items" above.
+
+1. ~~Finish TEST-COLLISION fix~~ — done 2026-05-29 (`e1ed479`); 62 Unity tests on-target re-verified session 5.
+2. ~~One pairing story (MITM Passkey Display) across the repo~~ — done session 2 (C1: `08d6420` + `fa0e802`).
+3. ~~ML reproducibility — `extract_weights.py` (B1), accuracy reconciliation (B2), box-separability caveat (B3)~~ — done session 2 (B1: `53c27fd`, B2+B3: `0f5adf8`). B2 path-a retrain remains optional.
+4. ~~Defer NVS write out of BLE callback (A1)~~ — done session 2 (`a3ef354`); on-target re-verified session 5 (TC-010 + TC-012).
+5. ~~Reconcile counts/sizes (C3)~~ — done session 2 (`3b8acc2`); binary then `0x95cb0`, now `0x95d60`.
 
 ---
 
@@ -287,4 +300,4 @@ The test's own header comment (lines 5-9) says this is intentional: a TDD **red*
 
 Deep-read: all firmware C (`app_core`, `ble_env`, `env_sensor`, `display`, `tinyml_inference`, `main`), Android BLE/VM layer + manifest, full ML pipeline (`ml/*.py`), and every claim-bearing doc. Built main + test app; verified on-target test execution + binary size on the C3.
 
-Not line-audited: `ssd1306.c`/`font_big.c` (hardware/bitmap, TDD-exempt), individual Compose screens beyond `DataAlertsScreen`, `CsvExporter.kt`, `build_and_flash.md`/`debug_guide.md`, learning guides (grepped not full-read), `docs/superpowers/` planning docs. On-target pass/fail of the 25 currently-non-running tests is **unknown** until the rename fix is verified.
+Not line-audited at original review time (2026-05-29): `ssd1306.c`/`font_big.c` (hardware/bitmap, TDD-exempt), individual Compose screens beyond `DataAlertsScreen`, `CsvExporter.kt`, `build_and_flash.md`/`debug_guide.md`, learning guides (grepped not full-read), `docs/superpowers/` planning docs. The 25 then-non-running Unity tests were verified pass on-target the same day after the TEST-COLLISION rename fix (and re-verified session 5).
