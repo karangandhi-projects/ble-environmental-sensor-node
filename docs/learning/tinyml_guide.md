@@ -76,6 +76,13 @@ Three reasons matter for this project:
 | 4 | danger | Extreme temperature (risk of hardware damage or health hazard) |
 | 5 | anomaly | The classifier cannot confidently assign any class (not a trained class — see Section 7) |
 
+### Why Five Mutually-Exclusive Classes (and why softmax, not per-class sigmoids)?
+
+A reading is exactly one of {comfortable, warm, cold, humid, danger} — these are **mutually exclusive**. That single fact drives two design choices:
+
+- **Why softmax on the output, not five independent sigmoids?** A sigmoid-per-class head answers "is it warm? is it humid?" *independently*, allowing a reading to be 90% warm *and* 90% humid at once (multi-label). That's wrong here: a room is one category at a time. Softmax couples the outputs — they compete and sum to 1 — which is the correct prior for a "pick exactly one" problem. It also gives the anomaly trick (§7) its meaning: "no class above 50%" only makes sense when the classes share a probability budget.
+- **Why these five labels and not more/fewer?** They map to the distinct *actions* a downstream app cares about: nominal (comfortable), too hot (warm), too cold (cold), too damp (humid), and a hardware/health hazard (danger). Splitting finer (e.g. "slightly warm" vs "hot") would demand sharper boundaries than noisy ±2°C sensors can support; merging coarser would lose the danger signal. Five is the granularity the data can actually distinguish — confirmed by the 98.83% test accuracy holding up.
+
 ### Softmax: Turning Raw Scores Into Probabilities
 
 A neural network's final layer produces raw numbers called **logits** — one per class. These numbers are unbounded and do not directly mean anything. For our 5 classes, the network might output something like `[2.1, -0.3, -1.8, 0.4, -2.5]`.
@@ -170,7 +177,22 @@ static void relu(float *x, int n)
 }
 ```
 
-Why ReLU instead of sigmoid (the historical choice)? Sigmoid compresses all values into (0, 1), which causes **vanishing gradients** — the signal that teaches the network becomes exponentially small in early layers, making training very slow. ReLU has a constant gradient of 1 for positive inputs, so the learning signal flows freely backward through the network. It is also computationally trivial: one comparison per element.
+#### Why ReLU and not one of the alternatives?
+
+This is the most-asked "why," so here is the full menu and why each was passed over for *this* network's hidden layers:
+
+| Activation | Formula | Why not here |
+|---|---|---|
+| **Sigmoid** | `1/(1+e⁻ˣ)` | Squashes everything into (0, 1), so gradients shrink toward zero for large \|x\| → **vanishing gradients**, slow training. Also needs an `expf` per neuron — expensive if you ever ran it on-device. |
+| **Tanh** | `(eˣ−e⁻ˣ)/(eˣ+e⁻ˣ)` | Zero-centred (better than sigmoid) but still saturates at ±1, so the same vanishing-gradient problem. Two `expf` per neuron. |
+| **ReLU** ✅ | `max(0, x)` | No saturation for positive inputs → gradient is exactly 1 there, so the learning signal flows freely back to the first layer. One comparison per element — the cheapest non-linearity that exists. |
+| **Leaky ReLU / ELU / GELU** | small slope or curve for x<0 | Solve the "dying ReLU" problem (below) but add parameters/compute. On a 3-input toy network with cleanly separated classes, they buy no measurable accuracy — added complexity for nothing. |
+
+The deeper reason ReLU matters at all: without **any** non-linearity, stacking `Dense` layers collapses to a single linear map (`W₂(W₁x) = (W₂W₁)x`), so a 10-layer network would be no more expressive than one layer. ReLU's "kink" at 0 is the cheapest possible way to break that linearity and let the network bend decision boundaries.
+
+**The one risk — "dying ReLU":** because the gradient is exactly 0 for negative inputs, a neuron that gets pushed firmly negative can stop learning permanently (it always outputs 0, so no gradient ever flows to fix it). This is why Leaky ReLU exists. It did **not** bite this project because the inputs are normalised to [0, 1], the network is shallow, and Adam keeps the weights well-scaled — so no neuron ever got stranded. On a deeper or more sensitive network, Leaky ReLU would be the first thing to try if accuracy stalled.
+
+**Bottom line:** ReLU is the default *because* it is the simplest thing that trains well, and nothing about this problem justified a more expensive activation. "Use the cheapest tool that works" is the recurring TinyML theme.
 
 ### Our Architecture: 3 → 16 → 8 → 5
 
@@ -198,6 +220,27 @@ Translated to a data flow diagram:
        |
 [comfortable, warm, cold, humid, danger]
 ```
+
+### Why This Many Layers and Neurons? (and why not more or fewer)
+
+The code comment in `train_classifier.py` is blunt about it — *"Layer sizes (16, 8) chosen to balance accuracy vs. flash footprint."* Here is the reasoning behind every number, because picking architecture sizes is exactly the kind of decision a learner needs to be able to justify.
+
+**Why the input layer is 3.** Not a choice — it equals the feature count: temperature, humidity, pressure. The input "layer" is just the data.
+
+**Why the output layer is 5.** One neuron per *trained* class. This is forced by the problem (5 labels) and by softmax (one logit per class). The 6th class, `anomaly`, is **not** a neuron — it's derived from low confidence (§7). Adding a 6th output neuron would require labelled "anomaly" training examples, which by definition don't exist for "none of the above."
+
+**Why two hidden layers, not one or three?**
+- **One hidden layer** *can* approximate any function (the universal approximation theorem), but it often needs to be very wide to carve out several non-convex class regions. Two narrow layers express the same boundaries with far fewer weights, because the second layer composes the first layer's features instead of re-deriving them.
+- **Three+ hidden layers** add depth this problem doesn't need. With only 3 inputs and 5 well-separated classes, a third layer adds parameters (more flash, more overfitting risk) for no accuracy gain. Depth pays off when features are hierarchical (pixels → edges → shapes); three scalar sensor readings have no such hierarchy.
+- **Two** is the sweet spot: enough composition to handle the joint temp+humidity boundaries (§6), little enough to stay tiny and train in seconds.
+
+**Why 16 then 8 (a shrinking funnel)?**
+- **The funnel shape (16 → 8 → 5)** is a deliberate pattern: the first layer expands the 3 raw inputs into 16 "micro-patterns," then each subsequent layer *compresses* toward the 5-way decision. Expanding first gives the network room to detect many simple feature combinations; narrowing afterward forces it to keep only the patterns that actually discriminate classes. This is a gentle information bottleneck — it discourages memorising noise.
+- **Why not 32 → 16 (bigger)?** It trains to the same ~99% accuracy here, but doubles the weight count (more flash) and raises overfitting risk on a dataset this small (~1,900 samples). On a microcontroller, bytes you don't need are bytes you don't spend.
+- **Why not 8 → 4 (smaller)?** Tested informally, it still clears the 85% target, but margins on the hardest boundary (comfortable↔humid) get thinner and the model is more sensitive to the random seed. 16/8 leaves comfortable headroom (98.83% vs an 85% bar) for almost no cost.
+- **Powers of two (16, 8)** are convention, not magic — they pack neatly and make the parameter arithmetic easy to follow. 14 and 7 would work just as well.
+
+**How you'd actually choose these in practice.** There is no formula. The honest method is a small sweep: train a handful of candidates (`8/4`, `16/8`, `32/16`), compare *validation* accuracy and parameter count, and pick the smallest one that comfortably clears the target. The values here are the result of exactly that kind of "smallest model that clears 85% with margin" reasoning — embedded ML optimises for *fit-on-the-chip* first, accuracy-above-threshold second.
 
 ### Counting Parameters
 
@@ -238,6 +281,8 @@ model.compile(optimizer='adam',
 
 "Sparse" here just means labels are integers (0, 1, 2, 3, 4) rather than one-hot vectors — a memory optimization. The math is identical.
 
+**Why cross-entropy and not mean squared error (MSE)?** MSE is the natural loss for *regression* (predicting a number), and you *could* bolt it onto a classifier — but it trains badly here for two reasons. First, paired with softmax, MSE produces a **non-convex, flat-gradient** loss surface: when the model is confidently wrong, the gradient is nearly zero, so it learns slowly exactly when it most needs to correct. Cross-entropy paired with softmax has the opposite, ideal property — the gradient is simply `(predicted − actual)`, large precisely when the prediction is far off. Second, cross-entropy is the **maximum-likelihood** loss for a categorical distribution: minimising it is mathematically equivalent to maximising the probability the model assigns to the correct labels, which is exactly what we want a classifier to do. MSE has no such interpretation for class probabilities.
+
 ### Gradient Descent
 
 After computing the loss, the goal is to adjust the 245 weights to make it smaller. The tool for this is **gradient descent**.
@@ -269,6 +314,12 @@ This has two practical effects:
 
 Adam is the default optimizer for most classification tasks and is what `train_classifier.py` uses.
 
+**Why Adam and not plain SGD, SGD+momentum, or RMSprop?**
+- **Plain SGD** (fixed learning rate) works but is fussy — pick the rate too high and it diverges, too low and it crawls. You'd spend time hand-tuning it.
+- **SGD + momentum** accelerates by accumulating a velocity across steps, but still uses one global learning rate for every weight.
+- **RMSprop** adapts the rate *per weight* using a running average of squared gradients — half of what Adam does.
+- **Adam** = RMSprop's per-weight scaling **plus** momentum, with bias correction for the first few steps. It is the most forgiving choice: it converges fast and is robust to the initial learning rate, so on a small project you train once and move on instead of babysitting hyperparameters. For a 245-weight model that trains in seconds, there is zero reason to trade that convenience away for a hand-tuned SGD.
+
 ### Epochs and Batch Size
 
 The training call in `train_classifier.py`:
@@ -282,6 +333,17 @@ model.fit(X_train, y_train, epochs=50, batch_size=32, validation_split=0.1, verb
 - **Batch size:** Rather than computing the gradient on the entire dataset at once (expensive and memory-intensive) or on one sample at a time (noisy), you process 32 samples at a time. The gradient estimated from 32 samples is a good approximation of the true gradient and fits in CPU cache. One epoch of 1500 samples with batch_size=32 means about 47 gradient update steps.
 
 - **validation_split=0.1:** 10% of training data is held out during training and used to measure performance on unseen data after each epoch. This lets you spot overfitting — when training accuracy keeps rising but validation accuracy stops improving.
+
+### Why These Specific Values?
+
+None of these numbers are sacred — they're the standard "small, well-behaved dataset" defaults, and the validation curve confirmed they were enough:
+
+- **`epochs=50`** — enough passes for a 245-weight model on ~1,900 clean samples to plateau. You can tell it converged because validation accuracy flattens well before epoch 50; pushing to 200 wouldn't help and would risk overfitting. (A production pipeline would add *early stopping* to halt automatically when validation loss stops improving — overkill for a model that trains in seconds.)
+- **`batch_size=32`** — the classic default. Big enough that each gradient estimate is stable (averaging 32 samples cancels noise), small enough that the optimiser takes ~47 update steps per epoch instead of one giant step. It also fits trivially in cache. 16 or 64 would train equally well; 1 (pure stochastic) would be noisy, the full 1,900 (batch gradient descent) would take fewer, coarser steps.
+- **Learning rate** — not set explicitly, so Adam uses its default `0.001`. Because Adam adapts per-weight, this default "just works" across a huge range of problems; tuning it would be premature optimisation here.
+- **`random_state=42` / fixed RNG seed** — makes the split and the synthetic data **reproducible**. Re-running the pipeline gives the identical dataset and split, so the committed `ml_weights.h` is regenerable and the 98.83% number is verifiable, not a lucky run. (42 is just the customary placeholder seed.)
+
+The meta-point: these are *defaults chosen because the problem is easy*, and the validation accuracy is the evidence that they were sufficient. The discipline isn't picking magic numbers — it's watching the validation curve and only reaching for fancier machinery (schedules, early stopping, regularisation) when the curve tells you the defaults fell short.
 
 ### Train/Test Split and Overfitting
 
@@ -367,6 +429,12 @@ NORM = {'temp_c': (-10, 60), 'humidity_pct': (0, 100), 'pressure_hpa': (900, 110
 ```
 
 These ranges cover the full physical sensor slider range per the GATT profile (b7e00006: temp −10–60°C, humidity 0–100%, pressure 900–1100 hPa). Any value inside these ranges normalizes to [0, 1]. Values outside the range would normalize outside [0, 1] — the model would be extrapolating, and confidence typically drops, which is one mechanism that triggers anomaly detection.
+
+**Why min-max scaling and not z-score standardization?** The other common technique, *standardization*, subtracts the mean and divides by the standard deviation (`(x − μ) / σ`), giving each feature mean 0 and variance 1. Both work for training, but min-max wins **for this embedded deployment** for two concrete reasons:
+1. **The valid range is physically fixed and known.** A pressure sensor's output is bounded by physics (≈900–1100 hPa), not by whatever happened to be in the training set. Min-max encodes that real-world domain knowledge directly; z-score would tie the scaling to the training data's particular μ and σ, which shift every time you collect new data.
+2. **Out-of-range inputs become a free anomaly signal.** With min-max, a reading outside the physical range lands outside [0, 1], pushing the model into extrapolation territory where confidence drops — feeding the §7 anomaly check naturally. With z-score, an extreme value just becomes a large positive/negative number with no clean "out of bounds" meaning.
+
+**Why are the ranges hard-coded constants instead of computed from the data?** Because the firmware must apply the *exact same* transform with no access to the training set. The denominators `70.0 / 100.0 / 200.0` are compiled into `tinyml_inference.c`; if training used data-derived statistics, every retrain would silently change them and you'd have to keep firmware and Python in lockstep by hand. Fixed physical ranges make the contract explicit and auditable — which is why `train_classifier.py` flags the `NORM` dict with *"MUST match … tinyml_inference.c."*
 
 The firmware applies the exact same normalization before inference:
 
@@ -521,6 +589,24 @@ This is semantically correct: a reading of 25°C, 67% humidity is a genuinely am
 
 The confidence value reported for an anomaly is `(1.0 - out[best]) * 100`. This is the "degree of uncertainty" — how far the best class was from being confident. A best class probability of 0.49 gives an anomaly confidence of 51% (almost triggered normal classification). A best class probability of 0.20 gives 80% (strongly anomalous).
 
+### Why 0.50 and Not Some Other Threshold?
+
+0.50 is a principled floor, not an arbitrary tuning knob, and the reason is baked into how softmax behaves with 5 classes:
+
+- **It's the "is one class winning the majority?" line.** Five probabilities sum to 1. For any class to exceed 0.50, it must hold more probability mass than *all four others combined* — an unambiguous winner. Below 0.50, by definition at least two classes are sharing the vote, which is precisely the "I'm not sure" state we want to flag.
+- **Why not lower (e.g. 0.35)?** A well-trained, confident in-distribution prediction here sits at 0.95–0.99 (see the 98.83% accuracy). The gap between "confident" (~0.99) and "genuinely split" (~0.40) is wide, so the exact cut can sit anywhere in that valley. Drop it to 0.35 and you'd let through readings where the top class barely edges out a rival — more false negatives (missed anomalies).
+- **Why not higher (e.g. 0.70)?** You'd start flagging perfectly good predictions that happen to sit near a soft boundary at, say, 0.65 — more false positives (nuisance alerts). 0.50 is the natural midpoint that keeps both error types low *given how separated these classes are*. If the classes overlapped more, you'd lower it; if they were razor-sharp, you could raise it.
+
+The takeaway is that the threshold is tied to the **class separation in the data**, not chosen blindly — and for cleanly separated classes, the majority line (0.50) is the obvious, defensible choice.
+
+### Why Derive Anomaly From Confidence Instead of Training a 6th "None" Class?
+
+A tempting alternative: add a sixth output neuron for "anomaly" and train it. This **cannot work**, and the reason is a genuinely important ML concept called **open-set recognition**:
+
+- To train a class, you need labelled examples of it. But "anomaly" means *"none of the known classes"* — an open-ended, infinite set you cannot enumerate or sample. There is no finite training set for "everything that isn't one of these five."
+- Even if you collected some odd readings and labelled them "anomaly," the model would only learn to recognise *those particular* oddities, not the unbounded space of future ones. The first genuinely novel input would be misclassified.
+- The confidence-threshold approach sidesteps this entirely: it doesn't try to *learn* what anomalies look like — it infers anomaly from the absence of a confident known answer. The model only ever learns the five things it *can* be shown, and "unknown" falls out of the math for free. (This is also exactly why the earlier autoencoder failed, below — it tried to *model* normality and ended up rejecting valid non-comfortable classes.)
+
 ### Why the Autoencoder Approach Was Abandoned
 
 An autoencoder is a different kind of model: it learns to compress and reconstruct its input. Trained only on `comfortable` examples, it learns what comfortable sensor readings look like. At inference time, you run the input through the encoder and decoder, compute the reconstruction error, and flag anomalies when the error exceeds a threshold.
@@ -663,6 +749,28 @@ Android DataAlertsScreen.kt
 | Anomaly threshold | max softmax probability < 0.50 |
 | Inference latency | < 1 ms on ESP32-C3 at 160 MHz |
 | Firmware footprint added | ~5 KB |
+
+### Design Choices and Why the Alternatives Were Rejected
+
+A one-glance map of every "why this and not that" in this guide. The point of learning a technology deeply is being able to defend each row.
+
+| Decision | Chosen | Rejected alternatives | Core reason |
+|---|---|---|---|
+| Model type | Small MLP classifier | if-else rules; decision tree | Boundaries depend on the *joint* combination of noisy features (§1) |
+| Problem framing | 5-class, single-label | regression; multi-label | A reading is exactly one category → softmax, not per-class sigmoids (§2) |
+| Hidden activation | ReLU | sigmoid, tanh, Leaky/ELU/GELU | Cheapest non-linearity that trains without vanishing gradients (§3) |
+| Depth | 2 hidden layers | 1 (needs to be wide); 3+ (no gain) | Two narrow layers compose features; no feature hierarchy to justify more (§3) |
+| Width | 16 → 8 (funnel) | 32→16 (bigger); 8→4 (smaller) | Smallest size that clears 85% with margin; flash-first thinking (§3) |
+| Output activation | Softmax | independent sigmoids | Classes are mutually exclusive and share a probability budget (§2) |
+| Loss | Cross-entropy | MSE | Ideal gradient with softmax; it's the max-likelihood loss for categories (§4) |
+| Optimizer | Adam | SGD, SGD+momentum, RMSprop | Per-weight adaptive rate + momentum → train once, no babysitting (§4) |
+| Normalization | Min-max, fixed physical ranges | z-score; data-derived stats | Encodes known sensor bounds; firmware/Python stay in lockstep; free out-of-range signal (§6) |
+| Inference runtime | Pure-C forward pass | TFLite Micro | 245 weights don't justify a ~100 KB interpreter; not in IDF registry (§5, DD-018) |
+| Weight precision | float32 in a header | int8 quantization | ~735-byte saving is negligible on 400 KB SRAM; keeps full accuracy (§5) |
+| Anomaly detection | Confidence threshold < 0.50 | dedicated 6th class; autoencoder | Open-set: "unknown" has no training set; autoencoder rejects valid classes (§7, DD-019) |
+| Anomaly threshold | 0.50 | 0.35 (misses); 0.70 (false alarms) | The majority line, sized to this data's class separation (§7) |
+
+> The design-decision records `../design_decisions.md` (DD-018 / DD-019) are the canonical source for the runtime and anomaly choices; this table is the learner-facing summary.
 
 ### Files You Need to Understand the Full System
 
