@@ -2,6 +2,8 @@
 
 A chronological record of every significant problem hit during development, its root cause, and how it was fixed. Useful as a debugging reference for future sessions.
 
+> For the transferable *method* distilled from these issues (the reproduce → reference-example → diff → one-fix loop) and the meta-lessons, see [`learning/lessons_learned.md`](learning/lessons_learned.md).
+
 ---
 
 ## Issue 1 — Empty `components/` placeholder dirs caused CMake failure

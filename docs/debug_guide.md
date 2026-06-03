@@ -1,5 +1,7 @@
 # Debug Guide
 
+> This is a symptom → diagnosis lookup. For the underlying *debugging method* (reproduce → test the reference example → diff → change one thing) and the project's broader lessons, see [`learning/lessons_learned.md`](learning/lessons_learned.md).
+
 ## Debug Mindset
 
 BLE bugs often appear as mobile-app issues, but root causes can be in advertising data, GATT registration, connection parameters, security state, stale bonds, MTU assumptions, or callback logic.
